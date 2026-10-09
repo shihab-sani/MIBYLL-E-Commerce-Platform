@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: OnlineShop
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+app:
+  upload:
+    dir: uploads
+
+server:
+  port: 8080
