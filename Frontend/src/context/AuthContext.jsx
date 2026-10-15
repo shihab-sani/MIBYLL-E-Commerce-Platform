@@ -1,14 +1,25 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import api from '../api/axios'
+import { session } from '../api/session'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(() => {
-        const raw = localStorage.getItem('user')
-        return raw ? JSON.parse(raw) : null
-    })
+    const [user, setUser] = useState(() => session.getUser())
     const [loading, setLoading] = useState(false)
+
+    const persist = (data) => {
+        const u = {
+            id: data.id,
+            fullName: data.fullName,
+            email: data.email,
+            role: data.role,
+            phone: data.phone || '',
+            address: data.address || '',
+        }
+        session.set(data.token, u)
+        setUser(u)
+    }
 
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password })
@@ -22,23 +33,8 @@ export function AuthProvider({ children }) {
         return data
     }
 
-    const persist = (data) => {
-        const u = {
-            id: data.id,
-            fullName: data.fullName,
-            email: data.email,
-            role: data.role,
-            phone: data.phone || '',
-            address: data.address || '',
-        }
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(u))
-        setUser(u)
-    }
-
     const logout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        session.clear()
         setUser(null)
     }
 
@@ -46,35 +42,24 @@ export function AuthProvider({ children }) {
         try {
             setLoading(true)
             const { data } = await api.get('/auth/me')
-            const u = {
-                ...user,
-                id: data.id,
-                fullName: data.fullName,
-                email: data.email,
-                role: data.role,
-                phone: data.phone || '',
-                address: data.address || '',
-            }
-            localStorage.setItem('user', JSON.stringify(u))
+            const u = { ...user, ...data }
+            session.set(session.getToken(), u)
             setUser(u)
         } catch { /* ignore */ }
         finally { setLoading(false) }
     }
 
-    // ---- role flags ----
-    const isAdmin         = user?.role === 'ROLE_ADMIN'
-    const isSubAdmin      = user?.role === 'ROLE_SUBADMIN'
-    const isAdminPanelUser = isAdmin || isSubAdmin     // can access /admin
-    const isCustomer      = user?.role === 'ROLE_CUSTOMER'
-    const isAuthenticated = !!user                     // ← THIS WAS MISSING
+    const isAdmin          = user?.role === 'ROLE_ADMIN'
+    const isSubAdmin       = user?.role === 'ROLE_SUBADMIN'
+    const isAdminPanelUser = isAdmin || isSubAdmin
+    const isCustomer       = user?.role === 'ROLE_CUSTOMER'
+    const isAuthenticated  = !!user
 
     return (
         <AuthContext.Provider value={{
-            user,
-            login, register, logout, refreshProfile,
+            user, login, register, logout, refreshProfile,
             isAdmin, isSubAdmin, isAdminPanelUser, isCustomer,
-            isAuthenticated,
-            loading,
+            isAuthenticated, loading,
         }}>
             {children}
         </AuthContext.Provider>

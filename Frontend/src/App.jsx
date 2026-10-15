@@ -23,6 +23,7 @@ import ProductForm from './pages/admin/ProductForm'
 import Categories from './pages/admin/Categories'
 import Orders from './pages/admin/Orders'
 import Customers from './pages/admin/Customers'
+import FooterEditor from './pages/admin/FooterEditor'
 
 import Profile from './pages/Profile'
 import AdminProfile from './pages/admin/AdminProfile'
@@ -53,6 +54,7 @@ export default function App() {
                     <Route path="profile" element={<AdminProfile />} />
                     <Route path="sub-admins" element={<SubAdmins />} />
                     <Route path="audit" element={<AuditLog />} />
+                    <Route path="footer" element={<FooterEditor />} />
                 </Route>
 
                 {/* CUSTOMER — storefront layout with page transitions */}
