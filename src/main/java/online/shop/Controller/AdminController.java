@@ -8,6 +8,7 @@ import online.shop.DTOs.DashboardDto.*;
 import online.shop.DTOs.BannerDtos.*;
 import online.shop.DTOs.OrderDtos.*;
 import online.shop.DTOs.ProductDtos.*;
+import online.shop.Entity.SiteSettings;
 import online.shop.Services.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,6 +29,7 @@ public class AdminController {
     private final AdminService adminService;
     private final BannerService bannerService;
     private final AuditService auditService;
+    private final SiteSettingsService siteSettingsService;
 
     /* ---------------- DASHBOARD ---------------- */
 
@@ -219,5 +221,18 @@ public class AdminController {
                 .findFirst()
                 .map(GrantedAuthority::getAuthority)
                 .orElse("ROLE_SUBADMIN");
+    }
+
+    @GetMapping("/site/footer")
+    public ResponseEntity<SiteSettings> getFooter() {
+        return ResponseEntity.ok(siteSettingsService.get());
+    }
+
+    @PutMapping("/site/footer")
+    public ResponseEntity<SiteSettings> updateFooter(@AuthenticationPrincipal UserDetails ud,
+                                                     @RequestBody SiteSettings req) {
+        SiteSettings updated = siteSettingsService.update(req);
+        auditService.log(ud.getUsername(), roleOf(ud), "FOOTER_UPDATED", "SITE", "1", null);
+        return ResponseEntity.ok(updated);
     }
 }
