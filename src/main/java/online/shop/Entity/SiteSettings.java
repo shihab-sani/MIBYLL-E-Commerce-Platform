@@ -1,0 +1,48 @@
+package online.shop.Entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "site_settings")
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class SiteSettings {
+    @Id
+    private Long id;    // always 1
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String brandName = "Mibyll";
+
+    @Column(length = 500)
+    @Builder.Default
+    private String tagline = "A considered edit of contemporary craft. Made to be worn, kept and passed on.";
+
+    @Column(length = 500)
+    @Builder.Default
+    private String copyrightText = "";
+
+    /** JSON array of {label, href} for the "Shop" column */
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private String shopLinksJson = "[]";
+
+    /** JSON array of {label, href} for the "Account" column */
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private String accountLinksJson = "[]";
+
+    /** JSON array of {label, href} for the "Client Care" column */
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private String clientCareLinksJson = "[]";
+}
