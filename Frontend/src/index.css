@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- theme variables ---------- */
+:root {
+    --paper: 250 249 247;
+    --surface: 255 255 255;
+    --fg: 10 10 10;
+    --cbord: 229 229 229;
+    --muted: 115 115 115;
+    --sand: 232 227 220;
+}
+
+.dark {
+    --paper: 9 9 9;
+    --surface: 22 22 22;
+    --fg: 244 244 244;
+    --cbord: 42 42 42;
+    --muted: 160 160 160;
+    --sand: 32 32 32;
+}
+
+@layer base {
+    html { scroll-behavior: smooth; }
+    body {
+        background: rgb(var(--paper));
+        color: rgb(var(--fg));
+        @apply font-sans antialiased;
+    }
+    h1, h2, h3, h4 { @apply font-serif font-light; }
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex items-center justify-center bg-ink text-white px-8 py-3 text-[11px]
+        uppercase tracking-widest2 hover:bg-neutral-800 transition-colors
+        disabled:opacity-40 disabled:cursor-not-allowed;
+    }
+    .dark .btn-primary {
+        @apply bg-white text-ink hover:bg-neutral-200;
+    }
+    .btn-outline {
+        @apply inline-flex items-center justify-center border px-8 py-3 text-[11]
+        uppercase tracking-widest2 transition-colors;
+        border-color: rgb(var(--fg));
+        color: rgb(var(--fg));
+    }
+    .btn-outline:hover {
+        background: rgb(var(--fg));
+        color: rgb(var(--paper));
+    }
+    .input-field {
+        @apply w-full border px-4 py-3 text-sm focus:outline-none transition-colors;
+        background: rgb(var(--surface));
+        border-color: rgb(var(--cbord));
+        color: rgb(var(--fg));
+    }
+    .input-field:focus { border-color: rgb(var(--fg)); }
+    .label-field {
+        @apply block text-[10px] uppercase tracking-widest2 mb-2;
+        color: rgb(var(--muted));
+    }
+    .nav-link {
+        @apply text-[11px] uppercase tracking-widest2 hover:opacity-60 transition-opacity;
+    }
+    .card {
+        @apply border;
+        background: rgb(var(--surface));
+        border-color: rgb(var(--cbord));
+    }
+    .border-c { border-color: rgb(var(--cbord)); }
+    .text-muted { color: rgb(var(--muted)); }
+    .bg-surface { background: rgb(var(--surface)); }
+    .text-fg { color: rgb(var(--fg)); }
+}
+
+/* ============================================================
+   DARK-MODE SAFETY NET
+
+   Uses [class~="…"] attribute selectors instead of ".bg-white"
+   so Tailwind's @apply-expander never sees a utility selector
+   and can't raise the "circular dependency" error.
+   ============================================================ */
+
+/* --- backgrounds --- */
+.dark [class~="bg-white"]                                  { background-color: rgb(var(--surface)) !important; }
+.dark [class~="bg-neutral-50"]                             { background-color: rgb(var(--cbord) / 0.15) !important; }
+.dark [class~="bg-neutral-100"]                            { background-color: rgb(var(--cbord) / 0.30) !important; }
+.dark [class~="hover:bg-neutral-50"]:hover                 { background-color: rgb(var(--cbord) / 0.20) !important; }
+.dark [class~="hover:bg-neutral-100"]:hover                { background-color: rgb(var(--cbord) / 0.30) !important; }
+.dark [class~="hover:bg-neutral-50/60"]:hover              { background-color: rgb(var(--cbord) / 0.20) !important; }
+.dark [class~="bg-neutral-50/60"]                          { background-color: rgb(var(--cbord) / 0.15) !important; }
+
+/* --- text --- */
+.dark [class~="text-ink"]                                  { color: rgb(var(--fg)) !important; }
+.dark [class~="text-neutral-400"]                          { color: rgb(var(--muted)) !important; }
+.dark [class~="text-neutral-500"]                          { color: rgb(var(--muted)) !important; }
+.dark [class~="text-neutral-600"]                          { color: rgb(var(--muted)) !important; }
+.dark [class~="text-neutral-700"]                          { color: rgb(var(--fg)) !important; }
+.dark [class~="text-green-700"]                            { color: rgb(74 222 128) !important; }
+
+/* --- borders --- */
+.dark [class~="border-neutral-100"]                        { border-color: rgb(var(--cbord)) !important; }
+.dark [class~="border-neutral-200"]                        { border-color: rgb(var(--cbord)) !important; }
+.dark [class~="border-neutral-300"]                        { border-color: rgb(var(--cbord)) !important; }
+.dark [class~="border-ink"]                                { border-color: rgb(var(--fg)) !important; }
+
+/* --- dashed uploader border used inside ImageUploader --- */
+.dark [class~="border-dashed"]                             { border-color: rgb(var(--cbord)) !important; }
+
+/* --- form controls (native widget colours) --- */
+.dark select,
+.dark input,
+.dark textarea                                             { color-scheme: dark; }
+
+.dark input::placeholder,
+.dark textarea::placeholder                                { color: rgb(var(--muted)) !important; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- animations for smoother transitions ---------- */
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.animate-page-in {
+    animation: pageIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fadeUp 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slideRight {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+    animation: slideRight 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes gridIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.animate-grid-in {
+    animation: gridIn 380ms ease-out both;
+}
+
+/* Smooth hover lift for interactive cards */
+.hover-lift {
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Softer default transitions on the whole app */
+a, button, input, select, textarea {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: 220ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
