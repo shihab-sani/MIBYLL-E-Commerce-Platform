@@ -4,11 +4,13 @@ import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL']
 
 export default function ProductDetail() {
     const { slug } = useParams()
+    const { formatPrice } = useLocalization()
     const navigate = useNavigate()
     const { isAuthenticated } = useAuth()
     const { addToCart } = useCart()
@@ -115,10 +117,10 @@ export default function ProductDetail() {
                     <h1 className="text-3xl md:text-4xl font-serif leading-tight mb-5">{product.name}</h1>
 
                     <div className="flex items-baseline gap-3 mb-8">
-                        <span className="text-2xl">${product.finalPrice}</span>
+                        <span className="text-2xl">${formatPrice(product.finalPrice)}</span>
                         {hasDiscount && (
                             <>
-                                <span className="text-base text-neutral-400 line-through">${product.price}</span>
+                                <span className="text-base text-neutral-400 line-through">${formatPrice(product.price)}</span>
                                 <span className="text-[10px] uppercase tracking-widest2 bg-ink text-white px-2 py-1">
                   Save {product.discountPercent}%
                 </span>

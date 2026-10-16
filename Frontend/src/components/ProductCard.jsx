@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useLocalization } from '../context/LocalizationContext'
 
 export default function ProductCard({ product }) {
+    const { formatPrice, t } = useLocalization()
     const hasDiscount = product.discountPercent > 0
     const hoverImage = product.images?.[1] || product.images?.[0]
 
@@ -15,19 +17,21 @@ export default function ProductCard({ product }) {
                              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                     </>
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">No image</div>
+                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">
+                        {t('product.noImage')}
+                    </div>
                 )}
 
                 {hasDiscount && (
                     <span className="absolute top-3 left-3 bg-ink text-white text-[9px] uppercase tracking-widest2 px-2.5 py-1">
-            −{product.discountPercent}%
-          </span>
+                        −{product.discountPercent}%
+                    </span>
                 )}
                 {product.stockQuantity === 0 && (
                     <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest2 px-2.5 py-1
-                           bg-surface text-fg border border-c">
-            Sold Out
-          </span>
+                                     bg-surface text-fg border border-c">
+                        {t('product.soldOut')}
+                    </span>
                 )}
             </div>
 
@@ -37,9 +41,11 @@ export default function ProductCard({ product }) {
                 )}
                 <h3 className="text-sm font-sans font-normal leading-snug text-fg">{product.name}</h3>
                 <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-sm text-fg">${product.finalPrice}</span>
+                    <span className="text-sm text-fg">{formatPrice(product.finalPrice)}</span>
                     {hasDiscount && (
-                        <span className="text-xs text-muted line-through">${product.price}</span>
+                        <span className="text-xs text-muted line-through">
+                            {formatPrice(product.price)}
+                        </span>
                     )}
                 </div>
             </div>

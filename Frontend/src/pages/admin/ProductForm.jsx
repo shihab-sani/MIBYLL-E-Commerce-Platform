@@ -65,7 +65,7 @@ export default function ProductForm() {
             featured: form.featured,
             newArrival: form.newArrival,
             active: form.active,
-            categoryId: form.categoryId ? Number(form.categoryId) : null,
+            categoryId: form.categoryId || null,
             images: form.images,
         }
         try {
