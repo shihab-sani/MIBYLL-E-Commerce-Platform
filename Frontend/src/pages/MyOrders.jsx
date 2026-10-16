@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 const STATUS_STYLES = {
     PENDING:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
@@ -24,6 +25,8 @@ export default function MyOrders() {
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState('ALL')
+
+    const { formatPrice } = useLocalization()
 
     useEffect(() => {
         api.get('/orders')
@@ -73,7 +76,7 @@ export default function MyOrders() {
                 ) : (
                     <div className="space-y-4">
                         <p className="text-xs text-muted mb-4">
-                            Items currently in your cart — {cart.items.length} item(s), subtotal ${cart.subtotal}
+                            Items currently in your cart — {cart.items.length} item(s), subtotal {formatPrice(cart.subtotal)}
                         </p>
                         {cart.items.map(item => (
                             <div key={item.id} className="card p-4 flex gap-4 items-center">
@@ -85,10 +88,10 @@ export default function MyOrders() {
                                         {item.productName}
                                     </Link>
                                     <p className="text-xs text-muted mt-1">
-                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · ${item.unitPrice}
+                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · {formatPrice(item.unitPrice)}
                                     </p>
                                 </div>
-                                <span className="text-sm text-fg">${item.lineTotal}</span>
+                                <span className="text-sm text-fg">{formatPrice(item.lineTotal)}</span>
                             </div>
                         ))}
                         <div className="pt-4">
@@ -124,7 +127,7 @@ export default function MyOrders() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-widest2 text-muted">Total</p>
-                                        <p className="text-sm text-fg mt-1">${order.totalAmount}</p>
+                                        <p className="text-sm text-fg mt-1">{formatPrice(order.totalAmount)}</p>
                                     </div>
                                     <span className={`text-[10px] uppercase tracking-widest2 px-3 py-1.5 ${STATUS_STYLES[order.status]}`}>
                     {order.status}
@@ -140,10 +143,10 @@ export default function MyOrders() {
                                             <div className="flex-1 text-sm">
                                                 <p className="text-fg">{item.productName}</p>
                                                 <p className="text-xs text-muted mt-1">
-                                                    {item.size && `Size ${item.size} · `}Qty {item.quantity} · ${item.unitPrice}
+                                                    {item.size && `Size ${item.size} · `}Qty {item.quantity} · {formatPrice(item.unitPrice)}
                                                 </p>
                                             </div>
-                                            <span className="text-sm text-fg">${item.subtotal}</span>
+                                            <span className="text-sm text-fg">{formatPrice(item.subtotal)}</span>
                                         </div>
                                     ))}
                                 </div>

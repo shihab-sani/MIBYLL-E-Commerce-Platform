@@ -2,10 +2,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 export default function Cart() {
     const { cart, updateItem, removeItem, loading } = useCart()
     const { isAuthenticated } = useAuth()
+    const { formatPrice } = useLocalization()
     const navigate = useNavigate()
 
     const handleCheckout = () => {
@@ -62,12 +64,12 @@ export default function Cart() {
                                         <Link to={`/product/${item.slug}`} className="text-sm font-medium hover:opacity-60">
                                             {item.productName}
                                         </Link>
-                                        <span className="text-sm whitespace-nowrap">${item.lineTotal}</span>
+                                        <span className="text-sm whitespace-nowrap">{formatPrice(item.lineTotal)}</span>
                                     </div>
                                     {item.size && (
                                         <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest2">Size {item.size}</p>
                                     )}
-                                    <p className="text-xs text-neutral-500 mt-1">${item.unitPrice} each</p>
+                                    <p className="text-xs text-neutral-500 mt-1">{formatPrice(item.unitPrice)} each</p>
                                 </div>
 
                                 <div className="flex items-center justify-between mt-4">
@@ -103,12 +105,12 @@ export default function Cart() {
                     <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                             <span className="text-neutral-500">Subtotal</span>
-                            <span>${cart.subtotal}</span>
+                            <span>{formatPrice(cart.subtotal)}</span>
                         </div>
                         {cart.totalSavings > 0 && (
                             <div className="flex justify-between text-green-700">
                                 <span>Savings</span>
-                                <span>−${cart.totalSavings}</span>
+                                <span>−{formatPrice(cart.totalSavings)}</span>
                             </div>
                         )}
                         <div className="flex justify-between">
@@ -119,7 +121,7 @@ export default function Cart() {
 
                     <div className="border-t border-neutral-200 mt-6 pt-6 flex justify-between text-base">
                         <span className="uppercase tracking-widest2 text-[11px]">Total</span>
-                        <span className="font-medium">${cart.subtotal}</span>
+                        <span className="font-medium">{formatPrice(cart.subtotal)}</span>
                     </div>
 
                     <button onClick={handleCheckout} className="btn-primary w-full mt-8">

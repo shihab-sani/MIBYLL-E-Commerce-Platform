@@ -4,10 +4,12 @@ import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 export default function Checkout() {
     const { cart, fetchCart } = useCart()
     const { user, refreshProfile } = useAuth()
+    const { formatPrice } = useLocalization()
     const navigate = useNavigate()
 
     const [form, setForm] = useState({
@@ -114,7 +116,7 @@ export default function Checkout() {
                                     <p className="text-neutral-500 mt-1">
                                         {i.size && `Size ${i.size} · `}Qty {i.quantity}
                                     </p>
-                                    <p className="mt-1">${i.lineTotal}</p>
+                                    <p className="mt-1">{formatPrice(i.lineTotal)}</p>
                                 </div>
                             </div>
                         ))}
@@ -122,7 +124,7 @@ export default function Checkout() {
 
                     <div className="border-t border-neutral-200 mt-6 pt-6 space-y-3 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-neutral-500">Subtotal</span><span>${cart.subtotal}</span>
+                            <span className="text-neutral-500">Subtotal</span><span>{formatPrice(cart.subtotal)}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-neutral-500">Shipping</span><span>Free</span>
@@ -131,7 +133,7 @@ export default function Checkout() {
 
                     <div className="border-t border-neutral-200 mt-6 pt-6 flex justify-between">
                         <span className="text-[11px] uppercase tracking-widest2">Total</span>
-                        <span className="font-medium">${cart.subtotal}</span>
+                        <span className="font-medium">{formatPrice(cart.subtotal)}</span>
                     </div>
 
                     <button type="submit" disabled={submitting} className="btn-primary w-full mt-8">

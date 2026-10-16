@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import ThemeToggle from './ThemeToggle'
 import api from '../api/axios'
+import { useLocalization } from '../context/LocalizationContext'
 
 export default function Navbar() {
     const { user, logout, isAdmin, isAdminPanelUser, isAuthenticated } = useAuth()
     const { cart } = useCart()
+    const { country, language, countries, languages, setCountry, setLanguage, t } = useLocalization()
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -74,7 +76,7 @@ export default function Navbar() {
                             <div className="relative" ref={dropRef}>
                                 <button onClick={() => setCatOpen(v => !v)}
                                         className="nav-link flex items-center gap-2 text-fg">
-                                    Categories
+                                    {t('nav.categories')}
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
                                          stroke="currentColor" strokeWidth="2"
                                          className={`transition-transform ${catOpen ? 'rotate-180' : ''}`}>
@@ -87,7 +89,7 @@ export default function Navbar() {
                                          style={{ background: 'rgb(var(--surface))' }}>
                                         {categories.length === 0 ? (
                                             <p className="px-5 py-3 text-[11px] uppercase tracking-widest2 text-muted">
-                                                No categories
+                                                {t('nav.noCategories')}
                                             </p>
                                         ) : categories.map(c => (
                                             <button key={c.id} onClick={() => goCategory(c.slug)}
@@ -100,7 +102,7 @@ export default function Navbar() {
                                 )}
                             </div>
 
-                            <Link to="/shop" className="nav-link text-fg">All</Link>
+                            <Link to="/shop" className="nav-link text-fg">{t('nav.all')}</Link>
                         </nav>
 
                         <div className="flex items-center gap-5">
@@ -132,6 +134,30 @@ export default function Navbar() {
                                     </form>
                                 )}
                             </div>
+                            {/* Location / Language switcher */}
+                            <div className="relative hidden lg:flex items-center gap-2">
+                                <select
+                                    value={country?.code || 'US'}
+                                    onChange={(e) => setCountry(e.target.value)}
+                                    className="text-[10px] uppercase tracking-widest2 bg-transparent border-none
+                   text-fg focus:outline-none cursor-pointer"
+                                >
+                                    {countries.map((c) => (
+                                        <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                                    ))}
+                                </select>
+
+                                <select
+                                    value={language}
+                                    onChange={(e) => setLanguage(e.target.value)}
+                                    className="text-[10px] uppercase tracking-widest2 bg-transparent border-none
+                   text-fg focus:outline-none cursor-pointer"
+                                >
+                                    {languages.map((l) => (
+                                        <option key={l.code} value={l.code}>{l.code.toUpperCase()}</option>
+                                    ))}
+                                </select>
+                            </div>
 
                             <ThemeToggle />
 
@@ -141,12 +167,12 @@ export default function Navbar() {
 
                             {isAuthenticated ? (
                                 <div className="hidden lg:flex items-center gap-4">
-                                    <Link to="/profile" className="nav-link text-fg">Profile</Link>
-                                    {!isAdminPanelUser && <Link to="/orders" className="nav-link text-fg">Orders</Link>}
-                                    <button onClick={handleLogout} className="nav-link text-fg">Logout</button>
+                                    <Link to="/profile" className="nav-link text-fg">{t('nav.profile')}</Link>
+                                    {!isAdminPanelUser && <Link to="/orders" className="nav-link text-fg">{t('nav.orders')}</Link>}
+                                    <button onClick={handleLogout} className="nav-link text-fg">{t('nav.logout')}</button>
                                 </div>
                             ) : (
-                                <Link to="/login" className="hidden lg:block nav-link text-fg">Login</Link>
+                                <Link to="/login" className="hidden lg:block nav-link text-fg">{t('nav.login')}</Link>
                             )}
 
                             <Link to="/cart" className="relative text-fg">
@@ -195,7 +221,7 @@ export default function Navbar() {
                             <button onClick={() => setMobileCatOpen(v => !v)}
                                     className="flex items-center justify-between text-lg font-serif
                                  tracking-[0.2em] uppercase py-3 text-fg">
-                                Categories
+                                {t('nav.categories')}
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" strokeWidth="2"
                                      className={`transition-transform ${mobileCatOpen ? 'rotate-180' : ''}`}>
@@ -206,7 +232,7 @@ export default function Navbar() {
                             {mobileCatOpen && (
                                 <div className="pl-4 flex flex-col gap-3 mb-3 animate-fade-in">
                                     {categories.length === 0 ? (
-                                        <p className="text-[11px] uppercase tracking-widest2 text-muted">No categories</p>
+                                        <p className="text-[11px] uppercase tracking-widest2 text-muted">{t('nav.noCategories')}</p>
                                     ) : categories.map(c => (
                                         <button key={c.id} onClick={() => goCategory(c.slug)}
                                                 className="text-left text-sm uppercase tracking-widest2
@@ -219,30 +245,30 @@ export default function Navbar() {
 
                             <Link to="/shop" onClick={() => setOpen(false)}
                                   className="text-lg font-serif tracking-[0.2em] uppercase py-3 text-fg">
-                                All
+                                {t('nav.all')}
                             </Link>
                         </nav>
 
                         <div className="mt-12 pt-8 border-t border-c flex flex-col gap-5">
-                            {isAdmin && <Link to="/admin" onClick={() => setOpen(false)} className="nav-link text-fg">Admin Panel</Link>}
+                            {isAdmin && <Link to="/admin" onClick={() => setOpen(false)} className="nav-link text-fg">{t('nav.adminPanel')}</Link>}
                             {isAuthenticated ? (
                                 <>
                                     <Link to="/profile" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                        My Account
+                                        {t('nav.profile')}
                                     </Link>
                                     {!isAdminPanelUser && (
                                         <Link to="/orders" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                            My Orders
+                                            {t('nav.orders')}
                                         </Link>
                                     )}
                                     <button onClick={() => { handleLogout(); setOpen(false) }}
                                             className="nav-link text-left text-fg">
-                                        Logout
+                                        {t('nav.logout')}
                                     </button>
                                 </>
                             ) : (
                                 <Link to="/login" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                    Login / Register
+                                    {t('nav.login')}
                                 </Link>
                             )}
                         </div>
