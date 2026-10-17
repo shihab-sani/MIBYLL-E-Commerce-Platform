@@ -39,4 +39,8 @@ public class User {
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    private String country;
+    private String city;
+    private String zipCode;
 }

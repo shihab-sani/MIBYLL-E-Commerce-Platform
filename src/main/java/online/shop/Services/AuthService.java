@@ -36,7 +36,10 @@ public class AuthService {
                 .password(passwordEncoder.encode(req.password()))
                 .phone(req.phone())
                 .address(req.address())
-                .role(Role.ROLE_CUSTOMER)                 // always customer — never admin
+                .country(req.country())
+                .city(req.city())
+                .zipCode(req.zipCode())
+                .role(Role.ROLE_CUSTOMER)
                 .build();
 
         userRepository.save(user);
@@ -70,7 +73,7 @@ public class AuthService {
         User u = userRepository.findByEmail(email)
                 .orElseThrow(() -> ApiException.notFound("User not found"));
         return new UserProfile(u.getId(), u.getFullName(), u.getEmail(),
-                u.getPhone(), u.getAddress(), u.getRole().name());
+                u.getPhone(), u.getAddress(), u.getCountry(), u.getCity(), u.getZipCode(), u.getRole().name());
     }
 
     @Transactional
@@ -106,6 +109,9 @@ public class AuthService {
         if (req.fullName() != null && !req.fullName().isBlank()) u.setFullName(req.fullName());
         if (req.phone()    != null) u.setPhone(req.phone());
         if (req.address()  != null && !req.address().isBlank()) u.setAddress(req.address());
+        if (req.country()  != null) u.setCountry(req.country());
+        if (req.city()     != null) u.setCity(req.city());
+        if (req.zipCode()  != null) u.setZipCode(req.zipCode());
 
         userRepository.save(u);
         return getProfile(u.getEmail());

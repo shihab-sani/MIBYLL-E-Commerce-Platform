@@ -12,7 +12,10 @@ public class AuthDtos {
             @NotBlank @Email String email,
             @NotBlank @Size(min = 6, message = "Password must be at least 6 characters") String password,
             String phone,
-            @NotBlank(message = "Address is required") String address
+            @NotBlank(message = "Address is required") String address,
+            String country,
+            String city,
+            String zipCode
     ) {}
 
     public record LoginRequest(
@@ -32,15 +35,26 @@ public class AuthDtos {
     ) {}
 
     public record UserProfile(
-            UUID id, String fullName, String email, String phone, String address, String role
+            UUID id,
+            String fullName,
+            String email,
+            String phone,
+            String address,
+            String role,
+            String country,
+            String city,
+            String zipCode
     ) {}
 
     public record UpdateProfileRequest(
             String fullName,
-            String email,               // optional — only validated if changed
+            String email,
             String phone,
             String address,
-            String currentPassword,     // required only when newPassword is set
+            String country,
+            String city,
+            String zipCode,
+            String currentPassword,
             String newPassword
     ) {}
 }
