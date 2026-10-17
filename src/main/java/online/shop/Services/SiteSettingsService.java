@@ -39,6 +39,21 @@ public class SiteSettingsService {
                             {"Size Guide", "#"},
                             {"Contact", "#"},
                     }))
+                    .socialLinksJson("[{\"platform\":\"facebook\",\"url\":\"https://facebook.com\"}," +
+                            "{\"platform\":\"instagram\",\"url\":\"https://instagram.com\"}," +
+                            "{\"platform\":\"twitter\",\"url\":\"https://x.com\"}," +
+                            "{\"platform\":\"pinterest\",\"url\":\"https://pinterest.com\"}," +
+                            "{\"platform\":\"linkedin\",\"url\":\"https://linkedin.com\"}," +
+                            "{\"platform\":\"youtube\",\"url\":\"https://youtube.com\"}]")
+                    .aboutUsTitle("About Us")
+                    .aboutUsContent("Mibyll is a considered edit of contemporary craft. " +
+                            "Every piece is made in limited quantities by artisans who have " +
+                            "honed their craft over generations.\n\n" +
+                            "We believe in slow fashion: fewer, better things, made to be " +
+                            "worn, kept, and passed on. Our materials are chosen for how they " +
+                            "age, not just how they look on the first day.\n\n" +
+                            "Questions? Write to us at hello@mibyll.com.")
+                    .aboutUsEnabled(true)
                     .build();
             return repo.save(s);
         });
@@ -53,6 +68,13 @@ public class SiteSettingsService {
         current.setShopLinksJson(incoming.getShopLinksJson());
         current.setAccountLinksJson(incoming.getAccountLinksJson());
         current.setClientCareLinksJson(incoming.getClientCareLinksJson());
+        current.setSocialLinksJson(incoming.getSocialLinksJson());
+        current.setAboutUsTitle(incoming.getAboutUsTitle());
+        current.setAboutUsContent(incoming.getAboutUsContent());
+        current.setAboutUsEnabled(incoming.isAboutUsEnabled());
+        current.setContactEmail(incoming.getContactEmail());
+        current.setContactPhone(incoming.getContactPhone());
+        current.setContactAddress(incoming.getContactAddress());
         return repo.save(current);
     }
 

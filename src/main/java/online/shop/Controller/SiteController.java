@@ -21,12 +21,19 @@ public class SiteController {
     public ResponseEntity<Map<String, Object>> footer() {
         SiteSettings s = service.get();
         Map<String, Object> body = new HashMap<>();
-        body.put("brandName", s.getBrandName());
-        body.put("tagline", s.getTagline());
-        body.put("copyrightText", s.getCopyrightText());
-        body.put("shopLinks", service.parse(s.getShopLinksJson()));
-        body.put("accountLinks", service.parse(s.getAccountLinksJson()));
-        body.put("clientCareLinks", service.parse(s.getClientCareLinksJson()));
+        body.put("brandName",         s.getBrandName());
+        body.put("tagline",           s.getTagline());
+        body.put("copyrightText",     s.getCopyrightText());
+        body.put("shopLinks",         service.parse(s.getShopLinksJson()));
+        body.put("accountLinks",      service.parse(s.getAccountLinksJson()));
+        body.put("clientCareLinks",   service.parse(s.getClientCareLinksJson()));
+        body.put("socialLinks",       service.parse(s.getSocialLinksJson()));
+        body.put("aboutUsTitle",      s.getAboutUsTitle());
+        body.put("aboutUsContent",    s.getAboutUsContent());
+        body.put("aboutUsEnabled",    s.isAboutUsEnabled());
+        body.put("contactEmail", s.getContactEmail());
+        body.put("contactPhone", s.getContactPhone());
+        body.put("contactAddress", s.getContactAddress());
         return ResponseEntity.ok(body);
     }
 }

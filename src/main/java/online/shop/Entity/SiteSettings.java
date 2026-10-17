@@ -45,4 +45,32 @@ public class SiteSettings {
     @Column(columnDefinition = "TEXT")
     @Builder.Default
     private String clientCareLinksJson = "[]";
+
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private String socialLinksJson = "[]";
+
+    @Column(length = 200)
+    @Builder.Default
+    private String aboutUsTitle = "About Us";
+
+    @Column(columnDefinition = "LONGTEXT")
+    @Builder.Default
+    private String aboutUsContent = "";
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean aboutUsEnabled = true;
+
+    @Column(length = 200)
+    @Builder.Default
+    private String contactEmail = "hello@mibyll.com";
+
+    @Column(length = 50)
+    @Builder.Default
+    private String contactPhone = "+880 1700 000000";
+
+    @Column(length = 500)
+    @Builder.Default
+    private String contactAddress = "Dhaka, Bangladesh";
 }
