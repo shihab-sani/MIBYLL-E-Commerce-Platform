@@ -38,13 +38,13 @@ public class OrderService {
 
         BigDecimal shippingCost = BigDecimal.ZERO;
         if ("BD".equalsIgnoreCase(req.country())) {
-            if (req.city() != null && req.city().equalsIgnoreCase("Dhaka")) {
-                shippingCost = new BigDecimal("60");   // Pathao Inside Dhaka
+            if (req.city() != null && (req.city().equalsIgnoreCase("Barisal") || req.city().equalsIgnoreCase("Barishal"))) {
+                shippingCost = new BigDecimal("0.50");
             } else {
-                shippingCost = new BigDecimal("120");  // Pathao Outside Dhaka
+                shippingCost = new BigDecimal("1.00");
             }
         } else {
-            shippingCost = new BigDecimal("2500");     // International Flat Rate
+            shippingCost = new BigDecimal("25.00");
         }
 
         Order order = Order.builder()
@@ -60,7 +60,7 @@ public class OrderService {
                 .status(OrderStatus.PENDING)
                 .build();
 
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal itemsTotal = BigDecimal.ZERO;
 
         for (CartItem ci : cart.getItems()) {
             Product p = ci.getProduct();
@@ -86,10 +86,10 @@ public class OrderService {
             p.setStockQuantity(p.getStockQuantity() - ci.getQuantity());
             productRepository.save(p);
 
-            total = total.add(subtotal);
+            itemsTotal = itemsTotal.add(subtotal);
         }
 
-        order.setTotalAmount(total.add(shippingCost));
+        order.setTotalAmount(itemsTotal.add(shippingCost));
         Order saved = orderRepository.save(order);
 
         cart.getItems().clear();

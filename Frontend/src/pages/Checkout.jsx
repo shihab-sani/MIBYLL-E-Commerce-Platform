@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 const COUNTRIES = [
     { code: 'BD', name: 'Bangladesh' },
@@ -18,6 +19,9 @@ export default function Checkout() {
     const { user, refreshProfile } = useAuth()
     const navigate = useNavigate()
 
+    // Import your localization formatter
+    const { formatPrice } = useLocalization()
+
     const [form, setForm] = useState({
         shippingAddress: user?.address || '',
         phone: user?.phone || '',
@@ -28,18 +32,19 @@ export default function Checkout() {
     })
 
     const [submitting, setSubmitting] = useState(false)
-    const [shippingCost, setShippingCost] = useState(0)
 
-    // Calculate shipping dynamically based on selection
+    // Store shipping in USD (Base Currency) to match the cart subtotal
+    const [shippingCostUSD, setShippingCostUSD] = useState(0)
+
     useEffect(() => {
         if (form.country === 'BD') {
-            if (form.city.trim().toLowerCase() === 'dhaka') {
-                setShippingCost(60)
+            if (form.city.trim().toLowerCase() === 'barisal' || form.city.trim().toLowerCase() === 'barishal') {
+                setShippingCostUSD(0.50)  // Equivalent to 60 BDT
             } else {
-                setShippingCost(120)
+                setShippingCostUSD(1.00)  // Equivalent to 120 BDT
             }
         } else {
-            setShippingCost(2500) // International
+            setShippingCostUSD(25.00)     // Equivalent to 2500 BDT
         }
     }, [form.country, form.city])
 
@@ -71,7 +76,8 @@ export default function Checkout() {
         )
     }
 
-    const finalTotal = cart.subtotal + shippingCost
+    // Calculate total in USD, then format it
+    const finalTotalUSD = cart.subtotal + shippingCostUSD
 
     return (
         <div className="max-w-[1300px] mx-auto px-5 lg:px-10 py-12 lg:py-16">
@@ -87,7 +93,6 @@ export default function Checkout() {
                                 <input value={user?.fullName || ''} disabled className="input-field opacity-50" />
                             </div>
 
-                            {/* NEW: Shipping Destination */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="label-field">Country *</label>
@@ -148,7 +153,8 @@ export default function Checkout() {
                                 <div className="flex-1 text-xs">
                                     <p className="leading-snug">{i.productName}</p>
                                     <p className="text-muted mt-1">{i.size && `Size ${i.size} · `}Qty {i.quantity}</p>
-                                    <p className="mt-1">${i.lineTotal}</p>
+                                    {/* FORMAT PRICE HERE */}
+                                    <p className="mt-1">{formatPrice ? formatPrice(i.lineTotal) : `$${i.lineTotal}`}</p>
                                 </div>
                             </div>
                         ))}
@@ -156,17 +162,21 @@ export default function Checkout() {
 
                     <div className="border-t border-c mt-6 pt-6 space-y-3 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-muted">Subtotal</span><span>${cart.subtotal}</span>
+                            <span className="text-muted">Subtotal</span>
+                            {/* FORMAT PRICE HERE */}
+                            <span>{formatPrice ? formatPrice(cart.subtotal) : `$${cart.subtotal}`}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-muted">Shipping</span>
-                            <span>BDT {shippingCost}</span>
+                            {/* FORMAT PRICE HERE */}
+                            <span>{formatPrice ? formatPrice(shippingCostUSD) : `$${shippingCostUSD}`}</span>
                         </div>
                     </div>
 
                     <div className="border-t border-c mt-6 pt-6 flex justify-between font-medium">
                         <span className="text-[11px] uppercase tracking-widest2">Total</span>
-                        <span>BDT {finalTotal}</span>
+                        {/* FORMAT PRICE HERE */}
+                        <span>{formatPrice ? formatPrice(finalTotalUSD) : `$${finalTotalUSD}`}</span>
                     </div>
 
                     <button type="submit" disabled={submitting} className="btn-primary w-full mt-8">
