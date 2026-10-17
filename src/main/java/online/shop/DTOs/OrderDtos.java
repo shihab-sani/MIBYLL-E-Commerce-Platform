@@ -15,16 +15,20 @@ public class OrderDtos {
     ) {}
 
     public record OrderDto(
-            UUID id, String orderNumber, BigDecimal totalAmount, OrderStatus status,
+            UUID id, String orderNumber, BigDecimal totalAmount, BigDecimal shippingCost, OrderStatus status,
             String shippingAddress, String phone, String paymentMethod,
             LocalDateTime createdAt, List<OrderItemDto> items,
-            String customerName, String customerEmail
+            String customerName, String customerEmail,
+            String country, String city, String zipCode
     ) {}
 
     public record PlaceOrderRequest(
             @NotBlank String shippingAddress,
             @NotBlank String phone,
-            String paymentMethod
+            String paymentMethod,
+            @NotBlank String country,
+            @NotBlank String city,
+            String zipCode
     ) {}
 
     public record UpdateStatusRequest(OrderStatus status) {}

@@ -53,4 +53,12 @@ public class Order {
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private BigDecimal shippingCost = BigDecimal.ZERO;
+
+    private String country;
+    private String city;
+    private String zipCode;
 }

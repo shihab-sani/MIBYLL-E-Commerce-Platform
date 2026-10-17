@@ -36,12 +36,27 @@ public class OrderService {
             throw ApiException.badRequest("Your cart is empty");
         }
 
+        BigDecimal shippingCost = BigDecimal.ZERO;
+        if ("BD".equalsIgnoreCase(req.country())) {
+            if (req.city() != null && req.city().equalsIgnoreCase("Dhaka")) {
+                shippingCost = new BigDecimal("60");   // Pathao Inside Dhaka
+            } else {
+                shippingCost = new BigDecimal("120");  // Pathao Outside Dhaka
+            }
+        } else {
+            shippingCost = new BigDecimal("2500");     // International Flat Rate
+        }
+
         Order order = Order.builder()
                 .orderNumber("ORD-" + System.currentTimeMillis())
                 .user(user)
                 .shippingAddress(req.shippingAddress())
                 .phone(req.phone())
                 .paymentMethod(req.paymentMethod() == null ? "COD" : req.paymentMethod())
+                .country(req.country())
+                .city(req.city())
+                .zipCode(req.zipCode())
+                .shippingCost(shippingCost)
                 .status(OrderStatus.PENDING)
                 .build();
 
@@ -74,7 +89,7 @@ public class OrderService {
             total = total.add(subtotal);
         }
 
-        order.setTotalAmount(total);
+        order.setTotalAmount(total.add(shippingCost));
         Order saved = orderRepository.save(order);
 
         cart.getItems().clear();
@@ -126,10 +141,11 @@ public class OrderService {
         )).toList();
 
         return new OrderDto(
-                o.getId(), o.getOrderNumber(), o.getTotalAmount(), o.getStatus(),
+                o.getId(), o.getOrderNumber(), o.getTotalAmount(), o.getShippingCost(), o.getStatus(),
                 o.getShippingAddress(), o.getPhone(), o.getPaymentMethod(),
                 o.getCreatedAt(), items,
-                o.getUser().getFullName(), o.getUser().getEmail()
+                o.getUser().getFullName(), o.getUser().getEmail(),
+                o.getCountry(), o.getCity(), o.getZipCode()
         );
     }
 }
