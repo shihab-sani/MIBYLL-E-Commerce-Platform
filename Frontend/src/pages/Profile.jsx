@@ -3,6 +3,14 @@ import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 
+const COUNTRIES = [
+    { code: 'BD', name: 'Bangladesh' },
+    { code: 'US', name: 'United States' },
+    { code: 'UK', name: 'United Kingdom' },
+    { code: 'IN', name: 'India' },
+    { code: 'CA', name: 'Canada' },
+]
+
 export default function Profile() {
     const { user, refreshProfile } = useAuth()
     const [loading, setLoading] = useState(true)
@@ -11,11 +19,10 @@ export default function Profile() {
 
     const [form, setForm] = useState({
         fullName: '', email: '', phone: '', address: '',
+        country: 'BD', city: '', zipCode: ''
     })
 
-    const [pwd, setPwd] = useState({
-        currentPassword: '', newPassword: '', confirmPassword: '',
-    })
+    const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
 
     useEffect(() => {
         api.get('/auth/me')
@@ -24,6 +31,9 @@ export default function Profile() {
                 email: r.data.email || '',
                 phone: r.data.phone || '',
                 address: r.data.address || '',
+                country: r.data.country || 'BD',
+                city: r.data.city || '',
+                zipCode: r.data.zipCode || '',
             }))
             .catch(() => {})
             .finally(() => setLoading(false))
@@ -104,6 +114,23 @@ export default function Profile() {
                     <textarea rows="3" value={form.address}
                               onChange={e => setForm({ ...form, address: e.target.value })}
                               className="input-field resize-none" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="label-field">Country</label>
+                        <select value={form.country} onChange={e => setForm({...form, country: e.target.value})} className="input-field">
+                            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="label-field">City</label>
+                        <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="input-field" placeholder="e.g. Dhaka" />
+                    </div>
+                </div>
+                <div>
+                    <label className="label-field">Zip Code</label>
+                    <input value={form.zipCode} onChange={e => setForm({...form, zipCode: e.target.value})} className="input-field" />
                 </div>
 
                 <button disabled={saving} className="btn-primary">

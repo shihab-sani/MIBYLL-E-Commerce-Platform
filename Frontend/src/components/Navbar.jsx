@@ -35,7 +35,6 @@ export default function Navbar() {
         return () => document.removeEventListener('mousedown', onDoc)
     }, [])
 
-    // Close search on route change
     useEffect(() => { setSearchOpen(false) }, [location.pathname, location.search])
 
     const handleLogout = () => { logout(); navigate('/') }
@@ -162,13 +161,17 @@ export default function Navbar() {
                             <ThemeToggle />
 
                             {isAdmin && (
-                                <Link to="/admin" className="hidden lg:block nav-link text-fg">Admin</Link>
+                                <Link to="/admin" className="hidden lg:block nav-link text-fg">{t('nav.admin')}</Link>
                             )}
 
                             {isAuthenticated ? (
                                 <div className="hidden lg:flex items-center gap-4">
-                                    <Link to="/profile" className="nav-link text-fg">{t('nav.profile')}</Link>
-                                    {!isAdminPanelUser && <Link to="/orders" className="nav-link text-fg">{t('nav.orders')}</Link>}
+                                    {!isAdminPanelUser && (
+                                        <>
+                                            <Link to="/profile" className="nav-link text-fg">{t('nav.profile')}</Link>
+                                            <Link to="/orders" className="nav-link text-fg">{t('nav.orders')}</Link>
+                                        </>
+                                    )}
                                     <button onClick={handleLogout} className="nav-link text-fg">{t('nav.logout')}</button>
                                 </div>
                             ) : (
@@ -253,13 +256,16 @@ export default function Navbar() {
                             {isAdmin && <Link to="/admin" onClick={() => setOpen(false)} className="nav-link text-fg">{t('nav.adminPanel')}</Link>}
                             {isAuthenticated ? (
                                 <>
-                                    <Link to="/profile" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                        {t('nav.profile')}
-                                    </Link>
+                                    {/* THE FIX: Wrapped the Profile link in the check */}
                                     {!isAdminPanelUser && (
-                                        <Link to="/orders" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                            {t('nav.orders')}
-                                        </Link>
+                                        <>
+                                            <Link to="/profile" onClick={() => setOpen(false)} className="nav-link text-fg">
+                                                {t('nav.profile')}
+                                            </Link>
+                                            <Link to="/orders" onClick={() => setOpen(false)} className="nav-link text-fg">
+                                                {t('nav.orders')}
+                                            </Link>
+                                        </>
                                     )}
                                     <button onClick={() => { handleLogout(); setOpen(false) }}
                                             className="nav-link text-left text-fg">

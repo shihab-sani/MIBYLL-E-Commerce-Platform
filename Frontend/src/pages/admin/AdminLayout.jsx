@@ -4,13 +4,13 @@ import ThemeToggle from '../../components/ThemeToggle'
 import { useLocation } from 'react-router-dom'
 
 const nav = [
-    { to: '/admin/footer', label: 'Footer' },
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/banners', label: 'Banners' },
     { to: '/admin/products', label: 'Products' },
     { to: '/admin/categories', label: 'Categories' },
     { to: '/admin/orders', label: 'Orders' },
     { to: '/admin/customers', label: 'Customers' },
+    { to: '/admin/footer', label: 'Footer' },
     { to: '/admin/profile', label: 'My Account' },
     { to: '/admin/sub-admins', label: 'Sub-Admins', adminOnly: true },
     { to: '/admin/audit', label: 'Audit Log', adminOnly: true },

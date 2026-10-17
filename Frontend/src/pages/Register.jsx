@@ -3,11 +3,20 @@ import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 
+const COUNTRIES = [
+    { code: 'BD', name: 'Bangladesh' },
+    { code: 'US', name: 'United States' },
+    { code: 'UK', name: 'United Kingdom' },
+    { code: 'IN', name: 'India' },
+    { code: 'CA', name: 'Canada' },
+]
+
 export default function Register() {
     const { register } = useAuth()
     const navigate = useNavigate()
     const [form, setForm] = useState({
-        fullName: '', email: '', password: '', phone: '', address: ''
+        fullName: '', email: '', password: '', phone: '', address: '',
+        country: 'BD', city: '', zipCode: ''
     })
     const [loading, setLoading] = useState(false)
 
@@ -40,42 +49,58 @@ export default function Register() {
                         <label className="label-field">Full Name *</label>
                         <input required value={form.fullName}
                                onChange={e => setForm({ ...form, fullName: e.target.value })}
-                               className="input-field" placeholder="Jane Doe" />
+                               className="input-field" />
                     </div>
                     <div>
                         <label className="label-field">Email *</label>
                         <input type="email" required value={form.email}
                                onChange={e => setForm({ ...form, email: e.target.value })}
-                               className="input-field" placeholder="you@example.com" />
+                               className="input-field" />
                     </div>
                     <div>
                         <label className="label-field">Phone (optional)</label>
                         <input value={form.phone}
                                onChange={e => setForm({ ...form, phone: e.target.value })}
-                               className="input-field" placeholder="+880 1XXX XXXXXX" />
+                               className="input-field" />
                     </div>
                     <div>
                         <label className="label-field">Address *</label>
-                        <textarea required rows="3" value={form.address}
+                        <textarea required rows="2" value={form.address}
                                   onChange={e => setForm({ ...form, address: e.target.value })}
-                                  className="input-field resize-none"
-                                  placeholder="Street, city, postal code, country" />
+                                  className="input-field resize-none" />
                     </div>
+
+                    {/* NEW: Country, City, Zip */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="label-field">Country *</label>
+                            <select value={form.country} onChange={e => setForm({...form, country: e.target.value})} className="input-field">
+                                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label-field">City *</label>
+                            <input required value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="input-field" placeholder="e.g. Dhaka" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="label-field">Zip Code</label>
+                        <input value={form.zipCode} onChange={e => setForm({...form, zipCode: e.target.value})} className="input-field" placeholder="e.g. 1207" />
+                    </div>
+
                     <div>
                         <label className="label-field">Password *</label>
                         <input type="password" required minLength={6} value={form.password}
                                onChange={e => setForm({ ...form, password: e.target.value })}
-                               className="input-field" placeholder="Minimum 6 characters" />
+                               className="input-field" />
                     </div>
 
                     <button disabled={loading} className="btn-primary w-full mt-2">
                         {loading ? 'Creating…' : 'Create Account'}
                     </button>
                 </form>
-
                 <p className="text-center text-xs text-muted mt-8">
-                    Already have an account?{' '}
-                    <Link to="/login" className="text-fg underline">Sign in</Link>
+                    Already have an account? <Link to="/login" className="text-fg underline">Sign in</Link>
                 </p>
             </div>
         </div>

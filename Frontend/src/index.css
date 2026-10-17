@@ -176,3 +176,13 @@ a, button, input, select, textarea {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Force native select dropdowns to respect dark mode */
+select, option {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--fg));
+}
+.dark select, .dark option {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--fg));
+}
