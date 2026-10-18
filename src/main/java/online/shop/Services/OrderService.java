@@ -38,13 +38,13 @@ public class OrderService {
 
         BigDecimal shippingCost = BigDecimal.ZERO;
         if ("BD".equalsIgnoreCase(req.country())) {
-            if (req.city() != null && (req.city().equalsIgnoreCase("Barisal") || req.city().equalsIgnoreCase("Barishal"))) {
-                shippingCost = new BigDecimal("0.50");
+            if (req.city() != null && req.city().equalsIgnoreCase("Dhaka")) {
+                shippingCost = new BigDecimal("60");
             } else {
-                shippingCost = new BigDecimal("1.00");
+                shippingCost = new BigDecimal("120");
             }
         } else {
-            shippingCost = new BigDecimal("25.00");
+            shippingCost = new BigDecimal("2500");
         }
 
         Order order = Order.builder()
