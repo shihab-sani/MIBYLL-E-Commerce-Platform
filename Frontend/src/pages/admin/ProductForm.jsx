@@ -140,7 +140,7 @@ export default function ProductForm() {
                     <h2 className="text-[11px] uppercase tracking-widest2 text-fg">Pricing &amp; Inventory</h2>
                     <div className="grid md:grid-cols-3 gap-5">
                         <div>
-                            <label className="label-field">Base Price ($) *</label>
+                            <label className="label-field">Base Price (৳) *</label>
                             <input type="number" step="0.01" min="0" required value={form.price}
                                    onChange={e => set('price', e.target.value)} className="input-field" />
                         </div>
@@ -150,7 +150,7 @@ export default function ProductForm() {
                                    onChange={e => set('discountPercent', e.target.value)} className="input-field" />
                             {Number(form.price) > 0 && Number(form.discountPercent) > 0 && (
                                 <p className="text-[10px] text-green-600 dark:text-green-400 mt-2">
-                                    Final: ${(Number(form.price) * (1 - Number(form.discountPercent) / 100)).toFixed(2)}
+                                    Final: ৳ {(Number(form.price) * (1 - Number(form.discountPercent) / 100)).toFixed(2)}
                                 </p>
                             )}
                         </div>

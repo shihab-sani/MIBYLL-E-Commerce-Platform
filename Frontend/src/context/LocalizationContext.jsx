@@ -8,21 +8,13 @@ const LS_REMEMBER  = 'mibyll.remember'
 const LS_RATES     = 'mibyll.rates'
 const LS_RATES_TS  = 'mibyll.rates.ts'
 
-const RATES_TTL_MS = 24 * 60 * 60 * 1000 // refresh once a day
+const RATES_TTL_MS = 24 * 60 * 60 * 1000 // refresh once a day (API updates daily)
 const RATES_URL    = 'https://open.er-api.com/v6/latest/USD'
 
 const LocalizationContext = createContext(null)
 
-/* ------------------------------------------------------------------ */
-/* Country auto-detection                                              */
-/* ------------------------------------------------------------------ */
-
 function detectFromBrowser() {
-    const candidates = [
-        navigator.language,
-        ...(navigator.languages || []),
-    ].filter(Boolean)
-
+    const candidates = [navigator.language, ...(navigator.languages || [])].filter(Boolean)
     for (const locale of candidates) {
         const region = locale.split('-')[1]
         if (region && COUNTRIES.some((c) => c.code === region.toUpperCase())) {
@@ -47,10 +39,6 @@ async function detectFromIp() {
     return null
 }
 
-/* ------------------------------------------------------------------ */
-/* Exchange rates                                                      */
-/* ------------------------------------------------------------------ */
-
 async function fetchRates() {
     const res = await fetch(RATES_URL)
     if (!res.ok) throw new Error('rates fetch failed')
@@ -68,8 +56,6 @@ function loadCachedRates() {
     } catch { return null }
 }
 
-/* ------------------------------------------------------------------ */
-
 export function LocalizationProvider({ children }) {
     const [country, setCountryState] = useState(() => {
         const saved = localStorage.getItem(LS_COUNTRY)
@@ -85,13 +71,12 @@ export function LocalizationProvider({ children }) {
         localStorage.getItem(LS_REMEMBER) !== 'true'
     )
 
-    /* -------- Auto-detect country on first visit -------- */
     useEffect(() => {
         if (country) { setReady(true); return }
 
         let cancelled = false
         ;(async () => {
-            const code = detectFromBrowser() || (await detectFromIp()) || 'US'
+            const code = detectFromBrowser() || (await detectFromIp()) || 'BD'
             if (cancelled) return
             setCountryState(findCountry(code))
             setReady(true)
@@ -99,7 +84,6 @@ export function LocalizationProvider({ children }) {
         return () => { cancelled = true }
     }, [country])
 
-    /* -------- Fetch exchange rates (once, cached) -------- */
     useEffect(() => {
         if (rates) return
         let cancelled = false
@@ -111,28 +95,26 @@ export function LocalizationProvider({ children }) {
                 localStorage.setItem(LS_RATES, JSON.stringify(r))
                 localStorage.setItem(LS_RATES_TS, String(Date.now()))
             } catch {
-                // Offline / blocked — prices will simply show as USD
-                if (!cancelled) setRates({ USD: 1 })
+                // Fallback: if API fails, use a sensible default so the UI doesn't break
+                if (!cancelled) setRates({ USD: 1, BDT: 123.79 })
             }
         })()
         return () => { cancelled = true }
     }, [rates])
 
-    /* -------- RTL support for Arabic -------- */
     useEffect(() => {
         document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
         document.documentElement.lang = language
     }, [language])
 
-    /* -------- Persistence -------- */
     useEffect(() => {
         if (country) localStorage.setItem(LS_COUNTRY, country.code)
     }, [country])
+
     useEffect(() => {
         localStorage.setItem(LS_LANGUAGE, language)
     }, [language])
 
-    /* -------- Public API -------- */
     const setCountry = useCallback((code) => {
         setCountryState(findCountry(code))
     }, [])
@@ -146,19 +128,27 @@ export function LocalizationProvider({ children }) {
         setShowModal(false)
     }, [])
 
-    /** Convert a USD amount to the current country's currency. */
-    const convertPrice = useCallback((usd) => {
-        if (usd == null) return 0
-        const target = country?.currency || 'USD'
-        if (target === 'USD' || !rates) return Number(usd)
-        const rate = rates[target]
-        return rate ? Number(usd) * rate : Number(usd)
+    /**
+     * Convert a BDT amount to the current country's currency.
+     * The API returns rates relative to USD (e.g., USD: 1, BDT: 123.79).
+     * To convert BDT to Target: (BDT / rate['BDT']) * rate[Target]
+     */
+    const convertPrice = useCallback((bdtAmount) => {
+        if (bdtAmount == null) return 0
+        const target = country?.currency || 'BDT'
+        if (target === 'BDT' || !rates) return Number(bdtAmount)
+
+        const bdtRate = rates['BDT'] || 123.79 // Fallback if API is down
+        const targetRate = rates[target] || 1
+
+        // Convert base BDT to USD, then to target currency
+        return (Number(bdtAmount) / bdtRate) * targetRate
     }, [country, rates])
 
-    /** Format a USD amount as a currency string in the user's locale. */
-    const formatPrice = useCallback((usd) => {
-        const amount = convertPrice(usd)
-        const currency = country?.currency || 'USD'
+    /** Format a BDT amount as a currency string in the user's locale. */
+    const formatPrice = useCallback((bdtAmount) => {
+        const amount = convertPrice(bdtAmount)
+        const currency = country?.currency || 'BDT'
         try {
             return new Intl.NumberFormat(language, {
                 style: 'currency',
@@ -169,7 +159,6 @@ export function LocalizationProvider({ children }) {
         }
     }, [convertPrice, country, language])
 
-    /** Translate a dot-path key, e.g. t('nav.cart'). Falls back to English. */
     const t = useCallback((key) => {
         const dict = TRANSLATIONS[language] || TRANSLATIONS.en
         const fallback = TRANSLATIONS.en

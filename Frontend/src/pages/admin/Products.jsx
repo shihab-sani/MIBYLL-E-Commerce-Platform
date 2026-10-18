@@ -121,7 +121,7 @@ export default function Products() {
                             <td className="px-5 py-4 text-muted">{p.categoryName || '—'}</td>
 
                             <td className="px-5 py-4">
-                                <button onClick={() => quickPrice(p)} className="text-fg hover:underline">${p.price}</button>
+                                <button onClick={() => quickPrice(p)} className="text-fg hover:underline">৳ {p.price}</button>
                             </td>
 
                             <td className="px-5 py-4">
@@ -131,7 +131,7 @@ export default function Products() {
                                 </button>
                             </td>
 
-                            <td className="px-5 py-4 text-fg font-medium">${p.finalPrice}</td>
+                            <td className="px-5 py-4 text-fg font-medium">৳ {p.finalPrice}</td>
 
                             <td className="px-5 py-4">
                                 <button onClick={() => quickStock(p)}
