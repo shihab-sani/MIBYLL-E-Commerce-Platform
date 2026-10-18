@@ -40,15 +40,18 @@ export default function Footer() {
     }, [])
 
     const renderLinks = (links) => (
-        <ul className="space-y-3 text-xs">
+        // INCREASED FONT SIZE: text-sm instead of text-xs
+        <ul className="space-y-3 text-sm">
             {(links || []).map((l, i) => (
                 <li key={i}>
                     {l.href?.startsWith('http') ? (
-                        <a href={l.href} target="_blank" rel="noopener noreferrer" className="hover:opacity-60">
+                        <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-white transition-colors">
                             {l.label}
                         </a>
                     ) : (
-                        <Link to={l.href || '#'} className="hover:opacity-60">{l.label}</Link>
+                        <Link to={l.href || '#'} className="text-neutral-300 hover:text-white transition-colors">
+                            {l.label}
+                        </Link>
                     )}
                 </li>
             ))}
@@ -61,14 +64,14 @@ export default function Footer() {
                 <div className="max-w-[1500px] mx-auto px-5 lg:px-10 py-16 grid grid-cols-2 md:grid-cols-4 gap-10">
                     <div className="col-span-2 md:col-span-1">
                         <h3 className="text-2xl font-serif tracking-[0.35em] uppercase mb-4">{f.brandName}</h3>
-                        <p className="text-xs text-neutral-400 leading-relaxed max-w-xs">{f.tagline}</p>
+                        {/* INCREASED FONT SIZE: text-sm instead of text-xs */}
+                        <p className="text-sm text-neutral-300 leading-relaxed max-w-xs">{f.tagline}</p>
 
-                        {/* About Us quick link */}
                         {f.aboutUsEnabled && (
                             <button
                                 onClick={() => setAboutOpen(true)}
-                                className="mt-4 text-[10px] uppercase tracking-widest2 text-neutral-400
-                                           hover:text-white underline"
+                                className="mt-5 text-xs uppercase tracking-widest2 text-neutral-300
+                                           hover:text-white underline transition-colors"
                             >
                                 About Us →
                             </button>
@@ -76,34 +79,45 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="text-[10px] uppercase tracking-widest2 mb-5 text-neutral-400">Shop</h4>
+                        {/* INCREASED HEADER FONT SIZE */}
+                        <h4 className="text-xs uppercase tracking-widest2 mb-5 text-neutral-400">Shop</h4>
                         {renderLinks(f.shopLinks)}
                     </div>
 
                     <div>
-                        <h4 className="text-[10px] uppercase tracking-widest2 mb-5 text-neutral-400">Account</h4>
+                        <h4 className="text-xs uppercase tracking-widest2 mb-5 text-neutral-400">Account</h4>
                         {renderLinks(f.accountLinks)}
                     </div>
 
                     <div>
-                        <h4 className="text-[10px] uppercase tracking-widest2 mb-5 text-neutral-400">Client Care</h4>
-                        <ul className="space-y-3 text-xs text-neutral-400">
+                        <h4 className="text-xs uppercase tracking-widest2 mb-5 text-neutral-400">Client Care</h4>
+                        {/* INCREASED FONT SIZE */}
+                        <ul className="space-y-3 text-sm text-neutral-300">
                             {(f.clientCareLinks || []).map((l, i) => (
-                                <li key={i} className="hover:text-white">
-                                    {l.href && l.href !== '#' ? <a href={l.href} target="_blank" rel="noopener noreferrer">{l.label}</a> : <span>{l.label}</span>}
+                                <li key={i} className="hover:text-white transition-colors">
+                                    {l.href && l.href !== '#' ? (
+                                        <a href={l.href} target="_blank" rel="noopener noreferrer">{l.label}</a>
+                                    ) : (
+                                        <span>{l.label}</span>
+                                    )}
                                 </li>
                             ))}
                             {f.aboutUsEnabled && (
                                 <li>
-                                    <button onClick={() => setAboutOpen(true)} className="hover:text-white text-left">About Us</button>
+                                    <button
+                                        onClick={() => setAboutOpen(true)}
+                                        className="hover:text-white transition-colors text-left"
+                                    >
+                                        About Us
+                                    </button>
                                 </li>
                             )}
                         </ul>
 
-                        {/* NEW: Render Contact Info */}
-                        <div className="mt-6 pt-6 border-t border-white/10 text-xs text-neutral-400 space-y-2">
-                            <p className="text-[10px] uppercase tracking-widest2 text-white/50 mb-2">Contact</p>
-                            {f.contactEmail && <p><a href={`mailto:${f.contactEmail}`} className="hover:text-white">{f.contactEmail}</a></p>}
+                        {/* NEW CONTACT INFO (INCREASED FONT SIZE) */}
+                        <div className="mt-8 pt-6 border-t border-white/10 text-sm text-neutral-300 space-y-2">
+                            <p className="text-xs uppercase tracking-widest2 text-neutral-400 mb-3">Contact</p>
+                            {f.contactEmail && <p><a href={`mailto:${f.contactEmail}`} className="hover:text-white transition-colors">{f.contactEmail}</a></p>}
                             {f.contactPhone && <p>{f.contactPhone}</p>}
                             {f.contactAddress && <p>{f.contactAddress}</p>}
                         </div>
@@ -122,13 +136,12 @@ export default function Footer() {
 
                 <div className="border-t border-white/10">
                     <div className="max-w-[1500px] mx-auto px-5 lg:px-10 py-6 flex flex-col md:flex-row
-                                    justify-between gap-3 text-[10px] uppercase tracking-widest2 text-neutral-500">
+                                    justify-between gap-3 text-xs uppercase tracking-widest2 text-neutral-500">
                         <span>{f.copyrightText || `© ${new Date().getFullYear()} ${f.brandName}. All rights reserved.`}</span>
                     </div>
                 </div>
             </footer>
 
-            {/* About Us slide-in */}
             <AboutUsPanel
                 open={aboutOpen}
                 onClose={() => setAboutOpen(false)}
