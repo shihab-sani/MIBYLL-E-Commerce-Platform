@@ -6,7 +6,9 @@ import online.shop.Entity.Categories;
 import online.shop.Entity.Product;
 import online.shop.Entity.ProductImage;
 import online.shop.ExceptionsHandler.ApiException;
+import online.shop.Repositories.CartItemRepository;
 import online.shop.Repositories.CategoryRepository;
+import online.shop.Repositories.OrderItemRepository;
 import online.shop.Repositories.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -25,6 +29,9 @@ import java.util.UUID;
 public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final FileStorageService fileStorageService;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
     /* ------------ PUBLIC READ ------------ */
 
@@ -114,17 +121,20 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Product not found"));
 
+        // Capture old images
+        List<String> oldImages = p.getImages().stream()
+                .map(ProductImage::getImageUrl)
+                .toList();
+
         p.setName(req.name());
-        if (req.slug() != null && !req.slug().isBlank()) {
-            p.setSlug(CategoryService.slugify(req.slug()));
-        }
+        if (req.slug() != null && !req.slug().isBlank()) p.setSlug(CategoryService.slugify(req.slug()));
         p.setDescription(req.description());
         p.setPrice(req.price());
         p.setDiscountPercent(req.discountPercent() == null ? 0 : req.discountPercent());
         p.setStockQuantity(req.stockQuantity());
         p.setBrand(req.brand());
         p.setFeatured(req.featured());
-        p.setNewArrival(req.newArrival());             // <-- NEW
+        p.setNewArrival(req.newArrival());
         if (req.active() != null) p.setActive(req.active());
 
         if (req.categoryId() != null) {
@@ -137,16 +147,49 @@ public class ProductService {
 
         p.getImages().clear();
         attachImages(p, req.images());
+        Product saved = productRepository.save(p);
 
-        return toDto(productRepository.save(p));
+        // Determine which images were removed during the update
+        List<String> newImages = req.images() != null ? req.images() : List.of();
+        List<String> imagesToDelete = oldImages.stream()
+                .filter(img -> !newImages.contains(img))
+                .toList();
+
+        registerFileDeletionAfterCommit(imagesToDelete);
+
+        return toDto(saved);
     }
 
     @Transactional
     public void delete(UUID id) {
-        if (!productRepository.existsById(id)) {
-            throw ApiException.notFound("Product not found");
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Product not found"));
+
+        cartItemRepository.deleteByProductId(id);
+        orderItemRepository.nullifyProductReference(id);
+
+        List<String> imageUrls = p.getImages().stream()
+                .map(ProductImage::getImageUrl)
+                .toList();
+
+        productRepository.delete(p);
+        registerFileDeletionAfterCommit(imageUrls);
+    }
+
+    private void registerFileDeletionAfterCommit(List<String> fileUrls) {
+        if (fileUrls == null || fileUrls.isEmpty()) return;
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    fileStorageService.deleteFiles(fileUrls);
+                }
+            });
+        } else {
+            // Fallback (shouldn't happen inside @Transactional, but safe)
+            fileStorageService.deleteFiles(fileUrls);
         }
-        productRepository.deleteById(id);
     }
 
     @Transactional

@@ -9,6 +9,8 @@ import online.shop.Repositories.BannerRepository;
 import online.shop.Repositories.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +20,7 @@ import java.util.UUID;
 public class BannerService {
     private final BannerRepository bannerRepository;
     private final ProductRepository productRepository;
+    private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public List<BannerDto> getActive(String position) {
@@ -57,6 +60,9 @@ public class BannerService {
         Banner b = bannerRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Banner not found"));
 
+        String oldMediaUrl = b.getMediaUrl();
+        boolean mediaChanged = req.mediaUrl() != null && !req.mediaUrl().equals(oldMediaUrl);
+
         b.setTitle(req.title());
         b.setSubtitle(req.subtitle());
         b.setCtaText(req.ctaText());
@@ -68,15 +74,44 @@ public class BannerService {
         if (req.displayOrder() != null) b.setDisplayOrder(req.displayOrder());
         if (req.active() != null) b.setActive(req.active());
 
-        return toDto(bannerRepository.save(b));
+        Banner saved = bannerRepository.save(b);
+
+        // SAFE FILE DELETION ON UPDATE
+        if (mediaChanged && oldMediaUrl != null) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        fileStorageService.deleteFile(oldMediaUrl);
+                    }
+                });
+            } else {
+                fileStorageService.deleteFile(oldMediaUrl);
+            }
+        }
+        return toDto(saved);
     }
 
     @Transactional
     public void delete(UUID id) {
-        if (!bannerRepository.existsById(id)) {
-            throw ApiException.notFound("Banner not found");
+        Banner b = bannerRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Banner not found"));
+
+        String mediaUrl = b.getMediaUrl();
+        bannerRepository.delete(b);
+
+        if (mediaUrl != null) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        fileStorageService.deleteFile(mediaUrl);
+                    }
+                });
+            } else {
+                fileStorageService.deleteFile(mediaUrl);
+            }
         }
-        bannerRepository.deleteById(id);
     }
 
     @Transactional

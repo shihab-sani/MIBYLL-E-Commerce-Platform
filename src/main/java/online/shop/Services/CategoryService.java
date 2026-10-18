@@ -7,6 +7,9 @@ import online.shop.Entity.Categories;
 import online.shop.ExceptionsHandler.ApiException;
 import online.shop.Repositories.CategoryRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -17,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final FileStorageService fileStorageService;
 
     public List<CategoryDtos.CategoryDto> getAll() {
         return categoryRepository.findAll().stream().map(this::toDto).toList();
@@ -27,6 +31,7 @@ public class CategoryService {
                 .orElseThrow(() -> ApiException.notFound("Category not found")));
     }
 
+    @Transactional
     public CategoryDto create(CategoryRequest req) {
         if (categoryRepository.existsByName(req.name())) {
             throw ApiException.badRequest("Category name already exists");
@@ -40,21 +45,57 @@ public class CategoryService {
         return toDto(categoryRepository.save(c));
     }
 
+    @Transactional
     public CategoryDto update(UUID id, CategoryRequest req) {
         Categories c = categoryRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Category not found"));
+
+        String oldImageUrl = c.getImageUrl();
+
         c.setName(req.name());
         c.setSlug(req.slug() != null && !req.slug().isBlank() ? slugify(req.slug()) : slugify(req.name()));
         c.setDescription(req.description());
         c.setImageUrl(req.imageUrl());
-        return toDto(categoryRepository.save(c));
+
+        CategoryDto saved = toDto(categoryRepository.save(c));
+
+        // SAFE FILE DELETION ON UPDATE
+        if (req.imageUrl() != null && !req.imageUrl().equals(oldImageUrl) && oldImageUrl != null) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        fileStorageService.deleteFile(oldImageUrl);
+                    }
+                });
+            } else {
+                fileStorageService.deleteFile(oldImageUrl);
+            }
+        }
+        return saved;
     }
 
+    @Transactional
     public void delete(UUID id) {
-        if (!categoryRepository.existsById(id)) {
-            throw ApiException.notFound("Category not found");
+        Categories c = categoryRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Category not found"));
+
+        String imageUrl = c.getImageUrl();
+        categoryRepository.delete(c);
+
+        // SAFE FILE DELETION ON DELETE
+        if (imageUrl != null) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        fileStorageService.deleteFile(imageUrl);
+                    }
+                });
+            } else {
+                fileStorageService.deleteFile(imageUrl);
+            }
         }
-        categoryRepository.deleteById(id);
     }
 
     public static String slugify(String input) {
