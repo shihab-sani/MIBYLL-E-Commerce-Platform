@@ -191,7 +191,18 @@ public class OrderService {
     public OrderDto approveRefund(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
+
+
         order.setRefundApproved(true);
+        order.setRefundRequested(false);
+        order.setRefundRejected(false);
+
+        refundLogRepository.save(OrderRefundLog.builder()
+                .order(order)
+                .action("APPROVED")
+                .reason("Refund approved by admin")
+                .build());
+
         return toDto(orderRepository.save(order));
     }
 
