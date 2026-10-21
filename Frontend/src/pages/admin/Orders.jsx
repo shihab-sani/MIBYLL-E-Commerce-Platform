@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+const money = (n) => `৳ ${Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const STATUS_STYLES = {
     PENDING:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
@@ -17,6 +18,10 @@ export default function Orders() {
     const [filter, setFilter] = useState('ALL')
     const [loading, setLoading] = useState(true)
     const [expanded, setExpanded] = useState(null)
+
+    // Reject Modal State
+    const [rejectModal, setRejectModal] = useState(null)
+    const [rejectionReason, setRejectionReason] = useState('')
 
     const load = () => {
         setLoading(true)
@@ -90,8 +95,13 @@ export default function Orders() {
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-fg">{order.orderNumber}</span>
                                     <span className={`text-[9px] uppercase tracking-widest2 px-2 py-0.5 ${STATUS_STYLES[order.status]}`}>
-                    {order.status}
-                  </span>
+                                        {order.status}
+                                    </span>
+                                    {order.refundRequested && (
+                                        <span className="text-[9px] uppercase tracking-widest2 px-2 py-0.5 bg-red-900/40 text-red-400 border border-red-900/50 animate-pulse">
+                                            ⚠️ Refund Requested
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-[11px] text-muted mt-2">
                                     {order.customerName} · {order.customerEmail}
@@ -103,7 +113,7 @@ export default function Orders() {
 
                             <div className="text-right">
                                 <p className="text-[9px] uppercase tracking-widest2 text-muted">Total</p>
-                                <p className="text-lg text-fg">${order.totalAmount}</p>
+                                <p className="text-lg text-fg">{money(order.totalAmount)}</p>
                             </div>
 
                             <select
@@ -124,6 +134,96 @@ export default function Orders() {
                                     <div>
                                         <p className="text-[9px] uppercase tracking-widest2 text-muted mb-2">Shipping Address</p>
                                         <p className="leading-relaxed text-fg">{order.shippingAddress}</p>
+
+                                        {/* SINGLE CORRECTED REFUND BOX */}
+                                        {(order.refundRequested || order.refundRejected || order.refundApproved) && (
+                                            <div className={`p-4 rounded mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border ${
+                                                order.refundApproved ? 'bg-green-900/20 border-green-900/50' :
+                                                    order.refundRejected && !order.refundRequested ? 'bg-gray-900/30 border-gray-700' :
+                                                        'bg-red-900/20 border-red-900/50'
+                                            }`}>
+                                                <div>
+                                                    {order.refundRequested ? (
+                                                        <>
+                                                            <p className="text-[10px] uppercase tracking-widest2 text-red-500 mb-1">Refund Requested</p>
+                                                            <p className="text-sm text-red-200">{order.refundReason}</p>
+                                                        </>
+                                                    ) : order.refundApproved ? (
+                                                        <p className="text-[10px] uppercase tracking-widest2 text-green-500 mb-1">Refund Approved</p>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-[10px] uppercase tracking-widest2 text-gray-400 mb-1">Refund Rejected</p>
+                                                            <p className="text-sm text-gray-300">Reason: {order.refundRejectionReason}</p>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                {order.refundRequested && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm('Approve this refund?')) return
+                                                                try {
+                                                                    await api.patch(`/admin/orders/${order.id}/approve-refund`)
+                                                                    toast.success('Refund approved')
+                                                                    load()
+                                                                } catch {
+                                                                    toast.error('Failed to approve')
+                                                                }
+                                                            }}
+                                                            className="btn-primary py-2 px-4 whitespace-nowrap text-xs"
+                                                        >
+                                                            Approve
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => setRejectModal({ orderId: order.id })}
+                                                            className="btn-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-white py-2 px-4 whitespace-nowrap text-xs"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {!order.refundRequested && order.refundApproved && (
+                                                    <span className="text-xs font-bold text-green-500 uppercase tracking-widest border border-green-500 px-3 py-1.5 rounded bg-green-900/20">
+                                                        Approved
+                                                    </span>
+                                                )}
+
+                                                {!order.refundRequested && order.refundRejected && (
+                                                    <span className="text-xs font-bold text-red-500 uppercase tracking-widest border border-red-500 px-3 py-1.5 rounded bg-red-900/20">
+                                                        Rejected
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* NEW: Refund History */}
+                                        {order.refundLogs && order.refundLogs.length > 0 && (
+                                            <div className="mt-6 border-t border-c pt-4">
+                                                <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
+                                                <div className="space-y-3">
+                                                    {order.refundLogs.map(log => (
+                                                        <div key={log.id} className="flex gap-3 text-xs">
+                                                            <div className="w-24 shrink-0 text-muted">
+                                                                {new Date(log.createdAt).toLocaleDateString()}
+                                                            </div>
+                                                            <div>
+                                                                <span className={`font-bold uppercase tracking-wider text-[9px] mr-2 ${
+                                                                    log.action === 'REJECTED' ? 'text-red-500' :
+                                                                        log.action === 'APPROVED' ? 'text-green-500' :
+                                                                            log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
+                                                                        }`}>
+                                                                    [{log.action}]
+                                                                </span>
+                                                                <span className="text-fg">{log.reason}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-[9px] uppercase tracking-widest2 text-muted mb-2">Contact</p>
@@ -143,10 +243,10 @@ export default function Orders() {
                                                 <div className="flex-1 text-xs">
                                                     <p className="text-fg">{item.productName}</p>
                                                     <p className="text-muted mt-0.5">
-                                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · ${item.unitPrice} each
+                                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · {money(item.unitPrice)} each
                                                     </p>
                                                 </div>
-                                                <span className="text-xs text-fg">${item.subtotal}</span>
+                                                <span className="text-xs text-fg">{money(item.subtotal)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -156,6 +256,32 @@ export default function Orders() {
                     </div>
                 ))}
             </div>
+
+            {/* REJECT MODAL */}
+            {rejectModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-5">
+                    <div className="absolute inset-0 bg-black/60" onClick={() => setRejectModal(null)} />
+                    <div className="relative card p-6 w-full max-w-md animate-page-in">
+                        <h2 className="text-xl font-serif mb-4 text-fg">Reject Refund</h2>
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!rejectionReason.trim()) return toast.error('Reason is required');
+                            try {
+                                await api.patch(`/admin/orders/${rejectModal.orderId}/reject-refund`, { reason: rejectionReason });
+                                toast.success('Refund rejected');
+                                setRejectModal(null); setRejectionReason(''); load();
+                            } catch { toast.error('Failed to reject'); }
+                        }}>
+                            <label className="label-field">Reason for rejection</label>
+                            <textarea required rows="4" value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} className="input-field resize-none mb-4" placeholder="Explain why the refund is rejected..." />
+                            <div className="flex justify-end gap-3">
+                                <button type="button" onClick={() => setRejectModal(null)} className="btn-outline">Cancel</button>
+                                <button type="submit" className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Confirm Rejection</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
