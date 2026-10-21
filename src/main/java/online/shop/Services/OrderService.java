@@ -24,11 +24,17 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final CartService cartService;
+    private final SiteSettingsService siteSettingsService;
 
     @Transactional
     public OrderDto placeOrder(String email, PlaceOrderRequest req) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> ApiException.notFound("User not found"));
+
+        User admin = userRepository.findFirstByRole(Role.ROLE_ADMIN)
+                .orElseThrow(() -> ApiException.notFound("Admin not found"));
+
+        SiteSettings settings = siteSettingsService.get();
 
         Cart cart = cartService.getOrCreateCart(user);
 
@@ -36,15 +42,24 @@ public class OrderService {
             throw ApiException.badRequest("Your cart is empty");
         }
 
-        BigDecimal shippingCost = BigDecimal.ZERO;
-        if ("BD".equalsIgnoreCase(req.country())) {
-            if (req.city() != null && req.city().equalsIgnoreCase("Dhaka")) {
-                shippingCost = new BigDecimal("60");
-            } else {
-                shippingCost = new BigDecimal("120");
-            }
+        String adminCountry = (admin != null && admin.getCountry() != null) ? admin.getCountry() : "BD";
+        String adminCity = (admin != null && admin.getCity() != null) ? admin.getCity() : "Dhaka";
+
+        String reqCountry = req.country() != null ? req.country() : "BD";
+        String reqCity = req.city() != null ? req.city() : "";
+
+        BigDecimal localRate = settings.getLocalDeliveryCharge() != null ? settings.getLocalDeliveryCharge() : new BigDecimal("60");
+        BigDecimal domesticRate = settings.getDomesticDeliveryCharge() != null ? settings.getDomesticDeliveryCharge() : new BigDecimal("120");
+        BigDecimal internationalRate = settings.getInternationalDeliveryCharge() != null ? settings.getInternationalDeliveryCharge() : new BigDecimal("3500");
+
+        // Calculate Shipping
+        BigDecimal shippingCost;
+        if (!adminCountry.equalsIgnoreCase(reqCountry)) {
+            shippingCost = internationalRate;
+        } else if (!adminCity.equalsIgnoreCase(reqCity)) {
+            shippingCost = domesticRate;
         } else {
-            shippingCost = new BigDecimal("2500");
+            shippingCost = localRate;
         }
 
         Order order = Order.builder()
