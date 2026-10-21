@@ -70,8 +70,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public UserProfile getProfile(String email) {
-        User u = userRepository.findByEmail(email)
-                .orElseThrow(() -> ApiException.notFound("User not found"));
+        User u = userRepository.findByEmail(email).orElseThrow(() -> ApiException.notFound("User not found"));
         return new UserProfile(u.getId(), u.getFullName(), u.getEmail(),
                 u.getPhone(), u.getAddress(), u.getCountry(), u.getCity(), u.getZipCode(), u.getRole().name());
     }

@@ -40,10 +40,10 @@ public class AuthDtos {
             String email,
             String phone,
             String address,
-            String role,
             String country,
             String city,
-            String zipCode
+            String zipCode,
+            String role
     ) {}
 
     public record UpdateProfileRequest(
