@@ -61,4 +61,25 @@ public class Order {
     private String country;
     private String city;
     private String zipCode;
+    private LocalDateTime deliveredAt;
+
+    @Builder.Default
+    private boolean refundRequested = false;
+
+    @Column(length = 1000)
+    private String refundReason;
+
+    @Builder.Default
+    private boolean refundApproved = false;
+
+    @Builder.Default
+    private boolean refundRejected = false;
+
+    @Column(length = 500)
+    private String refundRejectionReason;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    @Builder.Default
+    private java.util.List<OrderRefundLog> refundLogs = new java.util.ArrayList<>();
 }

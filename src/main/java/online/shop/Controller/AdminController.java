@@ -235,4 +235,23 @@ public class AdminController {
         auditService.log(ud.getUsername(), roleOf(ud), "FOOTER_UPDATED", "SITE", "1", null);
         return ResponseEntity.ok(updated);
     }
+
+    @PatchMapping("/orders/{id}/approve-refund")
+    public ResponseEntity<OrderDto> approveRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
+        OrderDto updated = orderService.approveRefund(id);
+        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_APPROVED", "ORDER", String.valueOf(id), null);
+        return ResponseEntity.ok(updated);
+    }
+
+    public record RejectionRequest(String reason) {}
+
+    @PatchMapping("/orders/{id}/reject-refund")
+    public ResponseEntity<OrderDto> rejectRefund(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable UUID id,
+            @RequestBody RejectionRequest req) {
+        OrderDto updated = orderService.rejectRefund(id, req.reason());
+        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_REJECTED", "ORDER", String.valueOf(id), null);
+        return ResponseEntity.ok(updated);
+    }
 }

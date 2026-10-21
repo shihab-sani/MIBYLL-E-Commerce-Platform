@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -28,5 +29,22 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<List<OrderDto>> myOrders(@AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.ok(orderService.myOrders(ud.getUsername()));
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<OrderDto> cancelOrder(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
+        return ResponseEntity.ok(orderService.cancelOrder(ud.getUsername(), id));
+    }
+
+    public record RefundRequest(String reason) {}
+
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<OrderDto> requestRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id, @RequestBody RefundRequest req) {
+        return ResponseEntity.ok(orderService.requestRefund(ud.getUsername(), id, req.reason()));
+    }
+
+    @PatchMapping("/{id}/cancel-refund")
+    public ResponseEntity<OrderDto> cancelRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
+        return ResponseEntity.ok(orderService.cancelRefundRequest(ud.getUsername(), id));
     }
 }

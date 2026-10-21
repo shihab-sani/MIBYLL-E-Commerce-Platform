@@ -14,12 +14,20 @@ public class OrderDtos {
             BigDecimal unitPrice, Integer quantity, BigDecimal subtotal, String size
     ) {}
 
+    public record OrderRefundLogDto(
+            UUID id, String action, String reason, LocalDateTime createdAt
+    ) {}
+
     public record OrderDto(
             UUID id, String orderNumber, BigDecimal totalAmount, BigDecimal shippingCost, OrderStatus status,
             String shippingAddress, String phone, String paymentMethod,
-            LocalDateTime createdAt, List<OrderItemDto> items,
+            LocalDateTime createdAt, LocalDateTime deliveredAt,
+            List<OrderItemDto> items,
             String customerName, String customerEmail,
-            String country, String city, String zipCode
+            String country, String city, String zipCode,
+            boolean refundRequested, String refundReason,
+            boolean refundApproved, boolean refundRejected, String refundRejectionReason,
+            List<OrderRefundLogDto> refundLogs // <-- NEW
     ) {}
 
     public record PlaceOrderRequest(

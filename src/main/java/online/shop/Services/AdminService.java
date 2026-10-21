@@ -36,7 +36,7 @@ public class AdminService {
                 .toList();
 
         BigDecimal totalRevenue = validOrders.stream()
-                .map(Order::getTotalAmount)
+                .map(o -> o.getTotalAmount().subtract(o.getShippingCost() != null ? o.getShippingCost() : BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long pending = orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();

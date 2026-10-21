@@ -4,16 +4,14 @@ import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.OrderDtos.*;
 import online.shop.Entity.*;
 import online.shop.ExceptionsHandler.ApiException;
-import online.shop.Repositories.CartRepository;
-import online.shop.Repositories.OrderRepository;
-import online.shop.Repositories.ProductRepository;
-import online.shop.Repositories.UserRepository;
+import online.shop.Repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +23,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final CartService cartService;
     private final SiteSettingsService siteSettingsService;
+    private final OrderRefundLogRepository refundLogRepository;
 
     @Transactional
     public OrderDto placeOrder(String email, PlaceOrderRequest req) {
@@ -132,6 +131,98 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
         order.setStatus(status);
+        if (status == OrderStatus.DELIVERED) {
+            order.setDeliveredAt(LocalDateTime.now());
+        }
+        return toDto(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDto cancelOrder(String email, UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("Order not found"));
+
+        if (!order.getUser().getEmail().equalsIgnoreCase(email)) {
+            throw ApiException.badRequest("Unauthorized");
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+            throw ApiException.badRequest("Cannot cancel order at this stage");
+        }
+
+        // Restore stock
+        for (OrderItem item : order.getItems()) {
+            if (item.getProduct() != null) {
+                Product p = item.getProduct();
+                p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
+                productRepository.save(p);
+            }
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        return toDto(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDto requestRefund(String email, UUID orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("Order not found"));
+
+        if (!order.getUser().getEmail().equalsIgnoreCase(email)) throw ApiException.badRequest("Unauthorized");
+        if (order.getStatus() != OrderStatus.DELIVERED) throw ApiException.badRequest("Only delivered orders can be refunded");
+        if (order.isRefundRequested()) throw ApiException.badRequest("Refund already requested");
+
+        if (order.getDeliveredAt() != null) {
+            long days = java.time.Duration.between(order.getDeliveredAt(), LocalDateTime.now()).toDays();
+            if (days >= 2) throw ApiException.badRequest("Refund window (2 days) has expired");
+        }
+
+        order.setRefundRequested(true);
+        order.setRefundReason(reason);
+        order.setRefundRejected(false);
+        order.setRefundRejectionReason(null);
+
+        refundLogRepository.save(OrderRefundLog.builder().order(order).action("REQUESTED").reason(reason).build());
+
+        return toDto(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDto approveRefund(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("Order not found"));
+        order.setRefundApproved(true);
+        return toDto(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDto rejectRefund(UUID orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("Order not found"));
+
+        order.setRefundRequested(false);
+        order.setRefundApproved(false);
+        order.setRefundRejected(true);
+        order.setRefundRejectionReason(reason);
+
+        refundLogRepository.save(OrderRefundLog.builder().order(order).action("REJECTED").reason(reason).build());
+
+        return toDto(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDto cancelRefundRequest(String email, UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("Order not found"));
+        if (!order.getUser().getEmail().equalsIgnoreCase(email)) throw ApiException.badRequest("Unauthorized");
+        if (order.isRefundApproved()) throw ApiException.badRequest("Cannot cancel an already approved refund");
+
+        order.setRefundRequested(false);
+        order.setRefundRejected(false);
+        order.setRefundRejectionReason(null);
+
+        refundLogRepository.save(OrderRefundLog.builder().order(order).action("CANCELLED").reason("Cancelled by customer").build());
+
         return toDto(orderRepository.save(order));
     }
 
@@ -155,12 +246,18 @@ public class OrderService {
                 i.getSize()
         )).toList();
 
+        List<OrderRefundLogDto> logs = o.getRefundLogs().stream()
+                .map(l -> new OrderRefundLogDto(l.getId(), l.getAction(), l.getReason(), l.getCreatedAt()))
+                .toList();
+
         return new OrderDto(
                 o.getId(), o.getOrderNumber(), o.getTotalAmount(), o.getShippingCost(), o.getStatus(),
                 o.getShippingAddress(), o.getPhone(), o.getPaymentMethod(),
-                o.getCreatedAt(), items,
+                o.getCreatedAt(), o.getDeliveredAt(), items,
                 o.getUser().getFullName(), o.getUser().getEmail(),
-                o.getCountry(), o.getCity(), o.getZipCode()
+                o.getCountry(), o.getCity(), o.getZipCode(),
+                o.isRefundRequested(), o.getRefundReason(), o.isRefundApproved(), o.isRefundRejected(), o.getRefundRejectionReason(),
+                logs
         );
     }
 }
