@@ -5,14 +5,7 @@ import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useLocalization } from '../context/LocalizationContext'
-
-const COUNTRIES = [
-    { code: 'BD', name: 'Bangladesh' },
-    { code: 'US', name: 'United States' },
-    { code: 'UK', name: 'United Kingdom' },
-    { code: 'IN', name: 'India' },
-    { code: 'CA', name: 'Canada' },
-]
+import { COUNTRIES, COUNTRY_CITIES } from '../data/locations' // NEW IMPORT
 
 export default function Checkout() {
     const { cart, fetchCart } = useCart()
@@ -29,22 +22,30 @@ export default function Checkout() {
         zipCode: user?.zipCode || '',
     })
 
-    const [submitting, setSubmitting] = useState(false)
+    const [storeInfo, setStoreInfo] = useState({
+        adminCountry: 'BD',
+        adminCity: 'Dhaka',
+        localRate: 60,
+        domesticRate: 120,
+        internationalRate: 3500
+    })
 
-    // Base currency is BDT
+    const [submitting, setSubmitting] = useState(false)
     const [shippingCost, setShippingCost] = useState(0)
 
     useEffect(() => {
-        if (form.country === 'BD') {
-            if (form.city.trim().toLowerCase() === 'dhaka') {
-                setShippingCost(60)   // Pathao Inside Dhaka
-            } else {
-                setShippingCost(120)  // Pathao Outside Dhaka
-            }
+        api.get('/site/store-info').then(r => setStoreInfo(r.data)).catch(() => {})
+    }, [])
+
+    useEffect(() => {
+        if (form.country !== storeInfo.adminCountry) {
+            setShippingCost(storeInfo.internationalRate)
+        } else if (form.city.trim().toLowerCase() !== storeInfo.adminCity.trim().toLowerCase()) {
+            setShippingCost(storeInfo.domesticRate)
         } else {
-            setShippingCost(2500)     // International
+            setShippingCost(storeInfo.localRate)
         }
-    }, [form.country, form.city])
+    }, [form.country, form.city, storeInfo])
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -74,7 +75,6 @@ export default function Checkout() {
         )
     }
 
-    // Calculate total in BDT, then format it
     const finalTotal = Number(cart.subtotal) + Number(shippingCost)
 
     return (
@@ -94,13 +94,30 @@ export default function Checkout() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="label-field">Country *</label>
-                                    <select value={form.country} onChange={e => set('country', e.target.value)} className="input-field">
+                                    <select
+                                        value={form.country}
+                                        onChange={e => {
+                                            set('country', e.target.value)
+                                            set('city', '') // Reset city
+                                        }}
+                                        className="input-field"
+                                    >
                                         {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="label-field">City *</label>
-                                    <input required value={form.city} onChange={e => set('city', e.target.value)} className="input-field" placeholder="e.g. Dhaka" />
+                                    <select
+                                        required
+                                        value={form.city}
+                                        onChange={e => set('city', e.target.value)}
+                                        className="input-field"
+                                    >
+                                        <option value="">Select City</option>
+                                        {(COUNTRY_CITIES[form.country] || []).map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
@@ -139,7 +156,6 @@ export default function Checkout() {
                     </section>
                 </div>
 
-                {/* SUMMARY */}
                 <aside className="lg:sticky lg:top-28 self-start card p-7">
                     <h2 className="text-[11px] uppercase tracking-widest2 mb-7">Your Order</h2>
                     <div className="space-y-5 max-h-72 overflow-y-auto pr-1">

@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
-
-const COUNTRIES = [
-    { code: 'BD', name: 'Bangladesh' },
-    { code: 'US', name: 'United States' },
-    { code: 'UK', name: 'United Kingdom' },
-    { code: 'IN', name: 'India' },
-    { code: 'CA', name: 'Canada' },
-]
+import { COUNTRIES, COUNTRY_CITIES } from '../data/locations'
 
 export default function Profile() {
     const { user, refreshProfile } = useAuth()
@@ -125,7 +118,11 @@ export default function Profile() {
                     </div>
                     <div>
                         <label className="label-field">City</label>
-                        <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="input-field" placeholder="e.g. Dhaka" />
+                        <select value={form.city} onChange={e => setForm({...form, city: e.target.value})} className="input-field" placeholder="e.g. Dhaka">
+                            {COUNTRY_CITIES[form.country]?.map(city => (
+                                <option key={city} value={city}>{city}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
                 <div>

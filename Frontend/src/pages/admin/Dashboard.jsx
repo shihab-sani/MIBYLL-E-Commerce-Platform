@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../../api/axios'
 
-const money = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const money = (n) => `৳ ${Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default function Dashboard() {
     const [data, setData] = useState(null)
