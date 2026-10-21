@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "site_settings")
 @Data
@@ -73,4 +75,13 @@ public class SiteSettings {
     @Column(length = 500)
     @Builder.Default
     private String contactAddress = "Dhaka, Bangladesh";
+
+    @Builder.Default
+    private BigDecimal localDeliveryCharge = new BigDecimal("70");
+
+    @Builder.Default
+    private BigDecimal domesticDeliveryCharge = new BigDecimal("120");
+
+    @Builder.Default
+    private BigDecimal internationalDeliveryCharge = new BigDecimal("3500");
 }
