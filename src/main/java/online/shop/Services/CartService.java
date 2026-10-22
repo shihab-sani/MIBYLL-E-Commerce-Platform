@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,7 @@ public class CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;   // <-- NEW
+    private final UserRepository userRepository;
 
     /* ------------------------------------------------------------- */
     /* Public API now takes the authenticated user's EMAIL            */
@@ -74,7 +75,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartDto updateItem(String email, Long itemId, int quantity) {
+    public CartDto updateItem(String email, UUID itemId, int quantity) {
         User user = loadUser(email);
         Cart cart = getOrCreateCart(user);
 
@@ -92,7 +93,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartDto removeItem(String email, Long itemId) {
+    public CartDto removeItem(String email, UUID itemId) {
         User user = loadUser(email);
         Cart cart = getOrCreateCart(user);
         cart.getItems().removeIf(i -> i.getId().equals(itemId));

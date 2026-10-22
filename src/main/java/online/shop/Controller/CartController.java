@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
@@ -30,14 +32,14 @@ public class CartController {
 
     @PutMapping("/items/{itemId}")
     public ResponseEntity<CartDto> update(@AuthenticationPrincipal UserDetails ud,
-                                          @PathVariable Long itemId,
+                                          @PathVariable UUID itemId,
                                           @Valid @RequestBody UpdateCartItemRequest req) {
         return ResponseEntity.ok(cartService.updateItem(ud.getUsername(), itemId, req.quantity()));
     }
 
     @DeleteMapping("/items/{itemId}")
     public ResponseEntity<CartDto> remove(@AuthenticationPrincipal UserDetails ud,
-                                          @PathVariable Long itemId) {
+                                          @PathVariable UUID itemId) {
         return ResponseEntity.ok(cartService.removeItem(ud.getUsername(), itemId));
     }
 
