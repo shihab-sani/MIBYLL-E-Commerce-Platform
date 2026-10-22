@@ -10,14 +10,15 @@ const STATUS_STYLES = {
     SHIPPED:   'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
     DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
     CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    REFUNDED:  'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
 }
 
 const TABS = [
     { key: 'ALL',       label: 'All' },
+    { key: 'CART',      label: 'In Cart' },
     { key: 'ONGOING',   label: 'Ongoing' },
     { key: 'DELIVERED', label: 'Delivered' },
     { key: 'CANCELLED', label: 'Cancelled' },
-    { key: 'CART',      label: 'In Cart' },
 ]
 
 export default function MyOrders() {

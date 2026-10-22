@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
-const STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+const STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']
 const money = (n) => `৳ ${Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const STATUS_STYLES = {
@@ -11,6 +11,7 @@ const STATUS_STYLES = {
     SHIPPED:   'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
     DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
     CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    REFUNDED:  'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
 }
 
 export default function Orders() {
