@@ -10,7 +10,10 @@ export default function Dashboard() {
     useEffect(() => {
         api.get('/admin/dashboard')
             .then(r => setData(r.data))
-            .catch(() => {})
+            .catch((err) => {
+                if (err.response?.status !== 401) {
+                }
+            })
             .finally(() => setLoading(false))
     }, [])
 

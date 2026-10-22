@@ -36,6 +36,12 @@ export default function ProductDetail() {
             navigate('/login', { state: { from: `/product/${slug}` } })
             return
         }
+
+        if (!size) {
+            toast.error('Please select a size first')
+            return
+        }
+
         setAdding(true)
         try {
             await addToCart(product.id, quantity, size)
@@ -117,10 +123,10 @@ export default function ProductDetail() {
                     <h1 className="text-3xl md:text-4xl font-serif leading-tight mb-5">{product.name}</h1>
 
                     <div className="flex items-baseline gap-3 mb-8">
-                        <span className="text-2xl">${formatPrice(product.finalPrice)}</span>
+                        <span className="text-2xl">{formatPrice(product.finalPrice)}</span>
                         {hasDiscount && (
                             <>
-                                <span className="text-base text-neutral-400 line-through">${formatPrice(product.price)}</span>
+                                <span className="text-base text-neutral-400 line-through">{formatPrice(product.price)}</span>
                                 <span className="text-[10px] uppercase tracking-widest2 bg-ink text-white px-2 py-1">
                   Save {product.discountPercent}%
                 </span>
