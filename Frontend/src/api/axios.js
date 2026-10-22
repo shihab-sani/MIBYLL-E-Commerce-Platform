@@ -24,15 +24,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (res) => res,
     (err) => {
-        if (err.response?.status === 401) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
             const isAuthEndpoint = err.config?.url?.includes('/auth/login')
             if (!isAuthEndpoint) {
-                // 1. Clear the session completely
+                // Clear the session completely
                 session.clear()
                 localStorage.removeItem('token')
                 localStorage.removeItem('user')
 
-                // 2. Force redirect to login, preserving the current path to return later
                 if (!window.location.pathname.startsWith('/login')) {
                     const currentPath = window.location.pathname + window.location.search
                     window.location.href = `/login?from=${encodeURIComponent(currentPath)}`

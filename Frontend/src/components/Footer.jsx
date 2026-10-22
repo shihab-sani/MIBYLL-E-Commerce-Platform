@@ -26,6 +26,7 @@ const fallback = {
     aboutUsTitle: 'About Us',
     aboutUsContent: '',
     aboutUsEnabled: false,
+    shippingPolicyContent: 'Complimentary shipping...',
     contactEmail: 'hello@mibyll.com',
     contactPhone: '+880 1700 000000',
     contactAddress: 'Dhaka, Bangladesh',
@@ -34,6 +35,7 @@ const fallback = {
 export default function Footer() {
     const [f, setF] = useState(fallback)
     const [aboutOpen, setAboutOpen] = useState(false)
+    const [shippingOpen, setShippingOpen] = useState(false)
 
     useEffect(() => {
         api.get('/site/footer').then(r => setF({ ...fallback, ...r.data })).catch(() => {})
@@ -93,25 +95,33 @@ export default function Footer() {
                         <h4 className="text-xs uppercase tracking-widest2 mb-5 text-neutral-400">Client Care</h4>
                         {/* INCREASED FONT SIZE */}
                         <ul className="space-y-3 text-sm text-neutral-300">
-                            {(f.clientCareLinks || []).map((l, i) => (
-                                <li key={i} className="hover:text-white transition-colors">
-                                    {l.href && l.href !== '#' ? (
-                                        <a href={l.href} target="_blank" rel="noopener noreferrer">{l.label}</a>
-                                    ) : (
-                                        <span>{l.label}</span>
-                                    )}
-                                </li>
-                            ))}
+                            {/* Hardcoded dynamic panels */}
+                            <li>
+                                <button onClick={() => setShippingOpen(true)} className="hover:text-white transition-colors text-left">
+                                    Shipping & Returns Policy
+                                </button>
+                            </li>
                             {f.aboutUsEnabled && (
                                 <li>
-                                    <button
-                                        onClick={() => setAboutOpen(true)}
-                                        className="hover:text-white transition-colors text-left"
-                                    >
+                                    <button onClick={() => setAboutOpen(true)} className="hover:text-white transition-colors text-left">
                                         About Us
                                     </button>
                                 </li>
                             )}
+
+                            {/* Filter out any duplicate links from the database */}
+                            {(f.clientCareLinks || [])
+                                .filter(l => l.label !== 'Shipping & Returns Policy' && l.label !== 'Shipping & Returns' && l.label !== 'About Us')
+                                .map((l, i) => (
+                                    <li key={i} className="hover:text-white transition-colors">
+                                        {l.href && l.href !== '#' ? (
+                                            <a href={l.href} target="_blank" rel="noopener noreferrer">{l.label}</a>
+                                        ) : (
+                                            <span>{l.label}</span>
+                                        )}
+                                    </li>
+                                ))
+                            }
                         </ul>
 
                         {/* NEW CONTACT INFO (INCREASED FONT SIZE) */}
@@ -147,6 +157,12 @@ export default function Footer() {
                 onClose={() => setAboutOpen(false)}
                 title={f.aboutUsTitle}
                 content={f.aboutUsContent}
+            />
+            <AboutUsPanel
+                open={shippingOpen}
+                onClose={() => setShippingOpen(false)}
+                title="Shipping & Returns Policy"
+                content={f.shippingPolicyContent}
             />
         </>
     )

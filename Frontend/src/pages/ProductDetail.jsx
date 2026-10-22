@@ -5,6 +5,7 @@ import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
+import AboutUsPanel from '../components/AboutUsPanel'
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL']
 
@@ -21,9 +22,15 @@ export default function ProductDetail() {
     const [quantity, setQuantity] = useState(1)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
+    const [shippingPolicy, setShippingPolicy] = useState('')
+    const [shippingOpen, setShippingOpen] = useState(false)
 
     useEffect(() => {
         setLoading(true)
+        api.get('/site/footer').then(r => {
+            if (r.data.shippingPolicyContent) setShippingPolicy(r.data.shippingPolicyContent)
+        }).catch(() => {})
+
         api.get(`/products/${slug}`)
             .then(r => { setProduct(r.data); setActiveImage(0) })
             .catch(() => setProduct(null))
@@ -180,9 +187,19 @@ export default function ProductDetail() {
                     </div>
 
                     <div className="mt-10 pt-8 border-t border-neutral-200 space-y-3 text-xs text-neutral-500">
-                        <p>Complimentary shipping on all orders over $200.</p>
-                        <p>Free returns within 30 days of delivery.</p>
+                        <button
+                            onClick={() => setShippingOpen(true)}
+                            className="underline hover:text-fg text-fg block"
+                        >
+                            View full Shipping & Returns Policy
+                        </button>
                     </div>
+                    <AboutUsPanel
+                        open={shippingOpen}
+                        onClose={() => setShippingOpen(false)}
+                        title="Shipping & Returns Policy"
+                        content={shippingPolicy}
+                    />
                 </div>
             </div>
         </div>

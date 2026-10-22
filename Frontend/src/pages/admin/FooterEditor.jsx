@@ -29,6 +29,7 @@ const empty = {
     brandName: '', tagline: '', copyrightText: '',
     shopLinks: [], accountLinks: [], clientCareLinks: [], socialLinks: [],
     aboutUsTitle: 'About Us', aboutUsContent: '', aboutUsEnabled: true,
+    shippingPolicyContent: '',
     contactEmail: '', contactPhone: '', contactAddress: ''
 }
 
@@ -129,6 +130,7 @@ export default function FooterEditor() {
                     aboutUsTitle: d.aboutUsTitle || 'About Us',
                     aboutUsContent: d.aboutUsContent || '',
                     aboutUsEnabled: d.aboutUsEnabled !== false,
+                    shippingPolicyContent: d.shippingPolicyContent || '',
                     contactEmail: d.contactEmail || '',
                     contactPhone: d.contactPhone || '',
                     contactAddress: d.contactAddress || '',
@@ -152,6 +154,7 @@ export default function FooterEditor() {
             aboutUsTitle: form.aboutUsTitle,
             aboutUsContent: form.aboutUsContent,
             aboutUsEnabled: form.aboutUsEnabled,
+            shippingPolicyContent: form.shippingPolicyContent,
             contactEmail: form.contactEmail,
             contactPhone: form.contactPhone,
             contactAddress: form.contactAddress,
@@ -220,6 +223,14 @@ export default function FooterEditor() {
                         <input type="checkbox" checked={form.aboutUsEnabled} onChange={e => setForm({ ...form, aboutUsEnabled: e.target.checked })} className="w-4 h-4 accent-black dark:accent-white" />
                         <span className="text-xs uppercase tracking-widest2 text-fg">Show "About Us" link in footer</span>
                     </label>
+                </section>
+
+                <section className="card p-6 space-y-4">
+                    <h2 className="text-[11px] uppercase tracking-widest2 text-fg">Shipping & Returns Policy</h2>
+                    <div>
+                        <label className="label-field">Content (blank line = new paragraph)</label>
+                        <textarea rows="8" value={form.shippingPolicyContent} onChange={e => setForm({ ...form, shippingPolicyContent: e.target.value })} className="input-field resize-none text-sm leading-relaxed" />
+                    </div>
                 </section>
 
                 {/* Passing form and setForm as props to the extracted components */}
