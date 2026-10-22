@@ -84,4 +84,8 @@ public class SiteSettings {
 
     @Builder.Default
     private BigDecimal internationalDeliveryCharge = new BigDecimal("3500");
+
+    @Column(columnDefinition = "LONGTEXT")
+    @Builder.Default
+    private String shippingPolicyContent = "Complimentary shipping on all orders over $200.\n\nFree returns within 30 days of delivery. Items must be unworn and in their original packaging with tags attached.";
 }

@@ -39,6 +39,8 @@ public class SiteSettingsService {
                             {"Size Guide", "#"},
                             {"Contact", "#"},
                     }))
+                    .shippingPolicyContent("Complimentary shipping on all orders over $200." +
+                            "\n\nFree returns within 30 days of delivery. Items must be unworn and in their original packaging with tags attached.")
                     .socialLinksJson("[{\"platform\":\"facebook\",\"url\":\"https://facebook.com\"}," +
                             "{\"platform\":\"instagram\",\"url\":\"https://instagram.com\"}," +
                             "{\"platform\":\"twitter\",\"url\":\"https://x.com\"}," +
@@ -75,6 +77,7 @@ public class SiteSettingsService {
         current.setContactEmail(incoming.getContactEmail());
         current.setContactPhone(incoming.getContactPhone());
         current.setContactAddress(incoming.getContactAddress());
+        current.setShippingPolicyContent(incoming.getShippingPolicyContent());
         return repo.save(current);
     }
 

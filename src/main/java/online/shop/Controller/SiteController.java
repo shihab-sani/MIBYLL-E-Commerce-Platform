@@ -39,6 +39,7 @@ public class SiteController {
         body.put("contactEmail", s.getContactEmail());
         body.put("contactPhone", s.getContactPhone());
         body.put("contactAddress", s.getContactAddress());
+        body.put("shippingPolicyContent", s.getShippingPolicyContent());
         return ResponseEntity.ok(body);
     }
 

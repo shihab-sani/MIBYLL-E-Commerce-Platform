@@ -26,7 +26,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfile> me(@AuthenticationPrincipal UserDetails ud) {
+    public ResponseEntity<?> me(@AuthenticationPrincipal UserDetails ud) {
+        if (ud == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(java.util.Map.of("message", "Unauthorized"));
+        }
         return ResponseEntity.ok(authService.getProfile(ud.getUsername()));
     }
 
