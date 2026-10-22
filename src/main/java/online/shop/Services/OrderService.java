@@ -196,6 +196,7 @@ public class OrderService {
         order.setRefundApproved(true);
         order.setRefundRequested(false);
         order.setRefundRejected(false);
+        order.setStatus(OrderStatus.REFUNDED);
 
         refundLogRepository.save(OrderRefundLog.builder()
                 .order(order)

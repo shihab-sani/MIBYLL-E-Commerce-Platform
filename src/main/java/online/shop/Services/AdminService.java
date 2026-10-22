@@ -32,7 +32,7 @@ public class AdminService {
         List<Order> orders = orderRepository.findAll();
 
         List<Order> validOrders = orders.stream()
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED && o.getStatus() != OrderStatus.REFUNDED)
                 .toList();
 
         BigDecimal totalRevenue = validOrders.stream()
