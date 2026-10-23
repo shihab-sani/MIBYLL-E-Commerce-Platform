@@ -134,7 +134,9 @@ export default function Dashboard() {
                                     {new Date(o.createdAt).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4 text-fg">{o.status}</td>
-                                <td className="px-6 py-4 text-right text-fg">{money(o.totalAmount)}</td>
+                                <td className="px-6 py-4 text-right text-fg">
+                                    {money(Number(o.totalAmount) - Number(o.shippingCost || 0))}
+                                </td>
                             </tr>
                         ))}
                         {recentOrders.length === 0 && (
