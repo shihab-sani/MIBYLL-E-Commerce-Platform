@@ -198,11 +198,12 @@ public class OrderService {
         order.setRefundRejected(false);
         order.setStatus(OrderStatus.REFUNDED);
 
-        refundLogRepository.save(OrderRefundLog.builder()
+        OrderRefundLog log = OrderRefundLog.builder()
                 .order(order)
                 .action("APPROVED")
                 .reason("Refund approved by admin")
-                .build());
+                .build();
+        refundLogRepository.save(log);
 
         return toDto(orderRepository.save(order));
     }

@@ -34,7 +34,7 @@ public class Order {
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(columnDefinition = "VARCHAR(50)", nullable = false)
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
 
