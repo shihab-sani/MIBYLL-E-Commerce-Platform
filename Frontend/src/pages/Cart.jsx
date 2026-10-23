@@ -67,7 +67,18 @@ export default function Cart() {
                                         <span className="text-sm whitespace-nowrap">{formatPrice(item.lineTotal)}</span>
                                     </div>
                                     {item.size && (
-                                        <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest2">Size {item.size}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] text-muted uppercase tracking-widest2">Size:</span>
+                                            <select
+                                                value={item.size}
+                                                onChange={(e) => updateItem(item.id, item.quantity, e.target.value)}
+                                                className="text-xs bg-transparent border border-neutral-300 dark:border-neutral-700 px-2 py-1 outline-none cursor-pointer hover:border-ink transition-colors"
+                                            >
+                                                {['XS', 'S', 'M', 'L', 'XL'].map(s => (
+                                                    <option key={s} value={s} className="bg-surface text-fg">{s}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     )}
                                     <p className="text-xs text-neutral-500 mt-1">{formatPrice(item.unitPrice)} each</p>
                                 </div>

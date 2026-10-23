@@ -30,8 +30,8 @@ export function CartProvider({ children }) {
         return data
     }
 
-    const updateItem = async (itemId, quantity) => {
-        const { data } = await api.put(`/cart/items/${itemId}`, { quantity })
+    const updateItem = async (itemId, quantity, size = '') => {
+        const { data } = await api.put(`/cart/items/${itemId}`, { quantity, size })
         setCart(data)
     }
 

@@ -67,20 +67,6 @@ export default function ProductDetail() {
         } finally { setAdding(false) }
     }
 
-    const handleQuickAdd = async (relProduct) => {
-        if (!isAuthenticated) {
-            toast.error('Please sign in to continue')
-            navigate('/login')
-            return
-        }
-        try {
-            await addToCart(relProduct.id, 1, 'M') // Defaults to M
-            toast.success('Added to bag (Size M)')
-        } catch (e) {
-            toast.error(e.response?.data?.message || 'Could not add to bag')
-        }
-    }
-
     if (loading) {
         return (
             <div className="max-w-[1500px] mx-auto px-5 lg:px-10 py-16 grid lg:grid-cols-2 gap-12">
@@ -233,11 +219,12 @@ export default function ProductDetail() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-10">
                         {related.map(rp => (
-                            <div key={rp.id} className="group flex flex-col">
-                                <Link
-                                    to={`/product/${rp.slug}`}
-                                    className="block relative bg-sand aspect-[3/4] overflow-hidden mb-4"
-                                >
+                            <Link
+                                to={`/product/${rp.slug}`}
+                                key={rp.id}
+                                className="group flex flex-col text-center"
+                            >
+                                <div className="relative bg-sand aspect-[3/4] overflow-hidden mb-4">
                                     {rp.images?.[0] ? (
                                         <img
                                             src={rp.images[0]}
@@ -249,22 +236,17 @@ export default function ProductDetail() {
                                             No Image
                                         </div>
                                     )}
-                                </Link>
+                                </div>
 
-                                <div className="mt-auto text-center">
-                                    <p className="text-sm font-medium text-fg mb-1">
+                                <div className="mt-auto">
+                                    <h3 className="text-sm font-medium text-fg mb-1 group-hover:opacity-70 transition-opacity">
+                                        {rp.name}
+                                    </h3>
+                                    <p className="text-sm text-fg">
                                         {formatPrice(rp.finalPrice)}
                                     </p>
-
-                                    <button
-                                        onClick={() => handleQuickAdd(rp)}
-                                        className="text-xl leading-none text-fg hover:opacity-50 transition-opacity"
-                                        title="Quick Add (Size M)"
-                                    >
-                                        +
-                                    </button>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </section>
