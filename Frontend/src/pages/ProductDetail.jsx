@@ -17,6 +17,7 @@ export default function ProductDetail() {
     const { addToCart } = useCart()
 
     const [product, setProduct] = useState(null)
+    const [related, setRelated] = useState([])
     const [activeImage, setActiveImage] = useState(0)
     const [size, setSize] = useState('')
     const [quantity, setQuantity] = useState(1)
@@ -32,7 +33,14 @@ export default function ProductDetail() {
         }).catch(() => {})
 
         api.get(`/products/${slug}`)
-            .then(r => { setProduct(r.data); setActiveImage(0) })
+            .then(r => {
+                setProduct(r.data)
+                setActiveImage(0)
+                // Fetch related products
+                api.get(`/products/${slug}/related`)
+                    .then(res => setRelated(res.data))
+                    .catch(() => {})
+            })
             .catch(() => setProduct(null))
             .finally(() => setLoading(false))
     }, [slug])
@@ -57,6 +65,20 @@ export default function ProductDetail() {
         } catch (e) {
             toast.error(e.response?.data?.message || 'Could not add to bag')
         } finally { setAdding(false) }
+    }
+
+    const handleQuickAdd = async (relProduct) => {
+        if (!isAuthenticated) {
+            toast.error('Please sign in to continue')
+            navigate('/login')
+            return
+        }
+        try {
+            await addToCart(relProduct.id, 1, 'M') // Defaults to M
+            toast.success('Added to bag (Size M)')
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Could not add to bag')
+        }
     }
 
     if (loading) {
@@ -202,6 +224,51 @@ export default function ProductDetail() {
                     />
                 </div>
             </div>
+
+            {related.length > 0 && (
+                <section className="mt-24 pt-12 border-t border-neutral-200">
+                    <h2 className="text-xl md:text-2xl font-serif text-fg mb-8">
+                        You may be interested in
+                    </h2>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-10">
+                        {related.map(rp => (
+                            <div key={rp.id} className="group flex flex-col">
+                                <Link
+                                    to={`/product/${rp.slug}`}
+                                    className="block relative bg-sand aspect-[3/4] overflow-hidden mb-4"
+                                >
+                                    {rp.images?.[0] ? (
+                                        <img
+                                            src={rp.images[0]}
+                                            alt={rp.name}
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400">
+                                            No Image
+                                        </div>
+                                    )}
+                                </Link>
+
+                                <div className="mt-auto text-center">
+                                    <p className="text-sm font-medium text-fg mb-1">
+                                        {formatPrice(rp.finalPrice)}
+                                    </p>
+
+                                    <button
+                                        onClick={() => handleQuickAdd(rp)}
+                                        className="text-xl leading-none text-fg hover:opacity-50 transition-opacity"
+                                        title="Quick Add (Size M)"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
         </div>
     )
 }
