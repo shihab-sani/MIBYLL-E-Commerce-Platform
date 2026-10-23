@@ -23,5 +23,8 @@ public class CartDtos {
             String size
     ) {}
 
-    public record UpdateCartItemRequest(@NotNull @Min(1) Integer quantity) {}
+    public record UpdateCartItemRequest(
+            @NotNull @Min(1) Integer quantity,
+            String size
+    ) {}
 }

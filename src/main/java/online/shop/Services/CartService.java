@@ -75,7 +75,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartDto updateItem(String email, UUID itemId, int quantity) {
+    public CartDto updateItem(String email, UUID itemId, int quantity, String newSize) {
         User user = loadUser(email);
         Cart cart = getOrCreateCart(user);
 
@@ -87,7 +87,27 @@ public class CartService {
         if (quantity > item.getProduct().getStockQuantity())
             throw ApiException.badRequest("Only " + item.getProduct().getStockQuantity() + " in stock");
 
-        item.setQuantity(quantity);
+        String targetSize = (newSize == null || newSize.isBlank()) ? item.getSize() : newSize;
+
+        if (!targetSize.equals(item.getSize())) {
+            CartItem existing = cartItemRepository
+                    .findByCartIdAndProductIdAndSize(cart.getId(), item.getProduct().getId(), targetSize)
+                    .orElse(null);
+
+            if (existing != null && !existing.getId().equals(itemId)) {
+                int newQty = existing.getQuantity() + quantity;
+                if (newQty > item.getProduct().getStockQuantity())
+                    throw ApiException.badRequest("Only " + item.getProduct().getStockQuantity() + " in stock");
+                existing.setQuantity(newQty);
+                cart.getItems().remove(item);
+            } else {
+                item.setSize(targetSize);
+                item.setQuantity(quantity);
+            }
+        } else {
+            item.setQuantity(quantity);
+        }
+
         cartRepository.save(cart);
         return toDto(cart);
     }
