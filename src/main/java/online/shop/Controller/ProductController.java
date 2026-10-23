@@ -43,4 +43,10 @@ public class ProductController {
         return ResponseEntity.ok(productService.getNewArrivals(limit));
     }
 
+    @GetMapping("/{slug}/related")
+    public ResponseEntity<List<ProductDto>> related(@PathVariable String slug) {
+        ProductDto current = productService.getBySlug(slug);
+        return ResponseEntity.ok(productService.getRelated(current.id(), current.categoryId()));
+    }
+
 }

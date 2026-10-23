@@ -216,6 +216,13 @@ public class ProductService {
         return toDto(productRepository.save(p));
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductDto> getRelated(UUID productId, UUID categoryId) {
+        if (categoryId == null) return List.of();
+        return productRepository.findTop8ByCategoryIdAndIdNotAndActiveTrue(categoryId, productId)
+                .stream().map(this::toDto).toList();
+    }
+
     /* ------------ helpers ------------ */
 
     private void attachImages(Product p, List<String> urls) {

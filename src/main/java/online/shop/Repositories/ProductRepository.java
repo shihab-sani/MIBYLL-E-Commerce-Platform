@@ -40,5 +40,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                          Pageable pageable);
 
     long countByStockQuantityLessThan(int threshold);
+    List<Product> findTop8ByCategoryIdAndIdNotAndActiveTrue(UUID categoryId, UUID id);
 
 }
