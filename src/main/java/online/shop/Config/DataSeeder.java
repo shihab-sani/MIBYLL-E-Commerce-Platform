@@ -197,8 +197,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seed(String name, BigDecimal price, int discount, int stock, String brand,
-                      boolean featured, boolean newArrival, UUID categoryId,
-                      String description, List<String> images) {
+                      boolean featured, boolean newArrival, UUID categoryId, String description, List<String> images) {
         productService.create(new ProductDtos.ProductRequest(
                 name,
                 null,
@@ -211,7 +210,9 @@ public class DataSeeder implements CommandLineRunner {
                 newArrival,
                 true,
                 categoryId,
-                images
+                images,
+                "CLOTHING",
+                java.util.List.of()
         ));
     }
 }
