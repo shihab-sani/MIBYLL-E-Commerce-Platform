@@ -95,6 +95,7 @@ public class OrderService {
                     .quantity(ci.getQuantity())
                     .subtotal(subtotal)
                     .size(ci.getSize())
+                    .variantName(ci.getVariantName())
                     .build());
 
             p.setStockQuantity(p.getStockQuantity() - ci.getQuantity());
@@ -256,7 +257,8 @@ public class OrderService {
                 i.getUnitPrice(),
                 i.getQuantity(),
                 i.getSubtotal(),
-                i.getSize()
+                i.getSize(),
+                i.getVariantName()
         )).toList();
 
         List<OrderRefundLogDto> logs = o.getRefundLogs().stream()

@@ -5,6 +5,7 @@ import online.shop.DTOs.ProductDtos.*;
 import online.shop.Entity.Categories;
 import online.shop.Entity.Product;
 import online.shop.Entity.ProductImage;
+import online.shop.Entity.ProductVariant;
 import online.shop.ExceptionsHandler.ApiException;
 import online.shop.Repositories.CartItemRepository;
 import online.shop.Repositories.CategoryRepository;
@@ -102,9 +103,17 @@ public class ProductService {
                 .stockQuantity(req.stockQuantity())
                 .brand(req.brand())
                 .featured(req.featured())
-                .newArrival(req.newArrival())          // <-- NEW
+                .newArrival(req.newArrival())
                 .active(req.active() == null || req.active())
                 .build();
+
+        p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
+        if (req.variants() != null) {
+            p.getVariants().clear();
+            for (VariantRequest v : req.variants()) {
+                p.getVariants().add(ProductVariant.builder().product(p).name(v.name()).imageUrl(v.imageUrl()).build());
+            }
+        }
 
         if (req.categoryId() != null) {
             Categories c = categoryRepository.findById(req.categoryId())
@@ -136,6 +145,14 @@ public class ProductService {
         p.setFeatured(req.featured());
         p.setNewArrival(req.newArrival());
         if (req.active() != null) p.setActive(req.active());
+
+        p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
+        if (req.variants() != null) {
+            p.getVariants().clear();
+            for (VariantRequest v : req.variants()) {
+                p.getVariants().add(ProductVariant.builder().product(p).name(v.name()).imageUrl(v.imageUrl()).build());
+            }
+        }
 
         if (req.categoryId() != null) {
             Categories c = categoryRepository.findById(req.categoryId())
@@ -243,6 +260,8 @@ public class ProductService {
         if (p.getImages() != null) {
             p.getImages().forEach(img -> images.add(img.getImageUrl()));
         }
+        List<VariantDto> variants = p.getVariants().stream()
+                .map(v -> new VariantDto(v.getId(), v.getName(), v.getImageUrl())).toList();
         return new ProductDto(
                 p.getId(), p.getName(), p.getSlug(), p.getDescription(),
                 p.getPrice(), p.getDiscountPercent(), p.getFinalPrice(),
@@ -250,7 +269,7 @@ public class ProductService {
                 p.isFeatured(), p.isNewArrival(), p.isActive(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                images, p.getCreatedAt()
+                images, p.getCreatedAt(), p.getSizeType(), variants
         );
     }
 }
