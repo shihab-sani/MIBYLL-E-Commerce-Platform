@@ -7,8 +7,6 @@ import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
 import AboutUsPanel from '../components/AboutUsPanel'
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL']
-
 export default function ProductDetail() {
     const { slug } = useParams()
     const { formatPrice } = useLocalization()
@@ -20,11 +18,22 @@ export default function ProductDetail() {
     const [related, setRelated] = useState([])
     const [activeImage, setActiveImage] = useState(0)
     const [size, setSize] = useState('')
+    const [selectedVariant, setSelectedVariant] = useState(null)
     const [quantity, setQuantity] = useState(1)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [shippingPolicy, setShippingPolicy] = useState('')
     const [shippingOpen, setShippingOpen] = useState(false)
+
+    // Helper to get available sizes based on Admin's selection
+    const getSizes = (type) => {
+        if (type === 'CLOTHING') return ['XS', 'S', 'M', 'L', 'XL']
+        if (type === 'SHOES') return ['38', '39', '40', '41', '42', '43', '44', '45']
+        if (type === 'RINGS') return ['5', '6', '7', '8', '9', '10', '11', '12']
+        return []
+    }
+
+    const availableSizes = getSizes(product?.sizeType)
 
     useEffect(() => {
         setLoading(true)
@@ -36,7 +45,8 @@ export default function ProductDetail() {
             .then(r => {
                 setProduct(r.data)
                 setActiveImage(0)
-                // Fetch related products
+                setSize('')
+                setSelectedVariant(null)
                 api.get(`/products/${slug}/related`)
                     .then(res => setRelated(res.data))
                     .catch(() => {})
@@ -45,6 +55,14 @@ export default function ProductDetail() {
             .finally(() => setLoading(false))
     }, [slug])
 
+    // Update image when a variant is selected
+    useEffect(() => {
+        if (selectedVariant && selectedVariant.imageUrl && product?.images) {
+            const idx = product.images.indexOf(selectedVariant.imageUrl)
+            if (idx !== -1) setActiveImage(idx)
+        }
+    }, [selectedVariant, product])
+
     const handleAdd = async (buyNow = false) => {
         if (!isAuthenticated) {
             toast.error('Please sign in to continue')
@@ -52,14 +70,14 @@ export default function ProductDetail() {
             return
         }
 
-        if (!size) {
+        if (availableSizes.length > 0 && !size) {
             toast.error('Please select a size first')
             return
         }
 
         setAdding(true)
         try {
-            await addToCart(product.id, quantity, size)
+            await addToCart(product.id, quantity, size, selectedVariant?.name || '')
             toast.success('Added to bag')
             if (buyNow) navigate('/cart')
         } catch (e) {
@@ -143,30 +161,59 @@ export default function ProductDetail() {
                             <>
                                 <span className="text-base text-neutral-400 line-through">{formatPrice(product.price)}</span>
                                 <span className="text-[10px] uppercase tracking-widest2 bg-ink text-white px-2 py-1">
-                  Save {product.discountPercent}%
-                </span>
+                                    Save {product.discountPercent}%
+                                </span>
                             </>
                         )}
                     </div>
 
                     <p className="text-sm text-neutral-600 leading-relaxed mb-10">{product.description}</p>
 
-                    {/* Size */}
-                    <div className="mb-7">
-                        <div className="flex justify-between mb-3">
-                            <span className="label-field mb-0">Size</span>
-                            <span className="text-[10px] uppercase tracking-widest2 text-neutral-400">Size guide</span>
+                    {/* VARIANTS (COLOR/DESIGN) */}
+                    {product.variants?.length > 0 && (
+                        <div className="mb-7">
+                            <div className="flex justify-between mb-3">
+                                <span className="label-field mb-0">Design / Color</span>
+                            </div>
+                            <div className="flex gap-3 flex-wrap">
+                                {product.variants.map(v => (
+                                    <button
+                                        key={v.id}
+                                        type="button"
+                                        onClick={() => setSelectedVariant(v)}
+                                        className={`w-14 h-14 border overflow-hidden transition-colors ${selectedVariant?.id === v.id ? 'border-ink' : 'border-transparent hover:border-neutral-400'}`}
+                                        title={v.name}
+                                    >
+                                        <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                            {selectedVariant && (
+                                <p className="text-xs text-muted mt-2">
+                                    Selected: <span className="text-fg">{selectedVariant.name}</span>
+                                </p>
+                            )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {SIZES.map(s => (
-                                <button key={s} onClick={() => setSize(s === size ? '' : s)}
-                                        className={`w-12 h-12 text-xs border transition-colors
-                          ${size === s ? 'bg-ink text-white border-ink' : 'border-neutral-300 hover:border-ink'}`}>
-                                    {s}
-                                </button>
-                            ))}
+                    )}
+
+                    {/* SIZES */}
+                    {product.sizeType !== 'NONE' && availableSizes.length > 0 && (
+                        <div className="mb-7">
+                            <div className="flex justify-between mb-3">
+                                <span className="label-field mb-0">Size</span>
+                                <span className="text-[10px] uppercase tracking-widest2 text-neutral-400">Size guide</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {availableSizes.map(s => (
+                                    <button key={s} onClick={() => setSize(s === size ? '' : s)}
+                                            className={`w-12 h-12 text-xs border transition-colors
+                              ${size === s ? 'bg-ink text-white border-ink' : 'border-neutral-300 hover:border-ink'}`}>
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Quantity */}
                     <div className="mb-8">
@@ -184,67 +231,39 @@ export default function ProductDetail() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                        <button onClick={() => handleAdd(false)} disabled={soldOut || adding}
-                                className="btn-primary flex-1">
+                        <button onClick={() => handleAdd(false)} disabled={soldOut || adding} className="btn-primary flex-1">
                             {adding ? 'Adding…' : 'Add to Bag'}
                         </button>
-                        <button onClick={() => handleAdd(true)} disabled={soldOut || adding}
-                                className="btn-outline flex-1">
+                        <button onClick={() => handleAdd(true)} disabled={soldOut || adding} className="btn-outline flex-1">
                             Buy Now
                         </button>
                     </div>
 
                     <div className="mt-10 pt-8 border-t border-neutral-200 space-y-3 text-xs text-neutral-500">
-                        <button
-                            onClick={() => setShippingOpen(true)}
-                            className="underline hover:text-fg text-fg block"
-                        >
+                        <button onClick={() => setShippingOpen(true)} className="underline hover:text-fg text-fg block">
                             View full Shipping & Returns Policy
                         </button>
                     </div>
-                    <AboutUsPanel
-                        open={shippingOpen}
-                        onClose={() => setShippingOpen(false)}
-                        title="Shipping & Returns Policy"
-                        content={shippingPolicy}
-                    />
+                    <AboutUsPanel open={shippingOpen} onClose={() => setShippingOpen(false)} title="Shipping & Returns Policy" content={shippingPolicy} />
                 </div>
             </div>
 
             {related.length > 0 && (
                 <section className="mt-24 pt-12 border-t border-neutral-200">
-                    <h2 className="text-xl md:text-2xl font-serif text-fg mb-8">
-                        You may be interested in
-                    </h2>
-
+                    <h2 className="text-xl md:text-2xl font-serif text-fg mb-8">You may be interested in</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-10">
                         {related.map(rp => (
-                            <Link
-                                to={`/product/${rp.slug}`}
-                                key={rp.id}
-                                className="group flex flex-col text-center"
-                            >
+                            <Link to={`/product/${rp.slug}`} key={rp.id} className="group flex flex-col text-center">
                                 <div className="relative bg-sand aspect-[3/4] overflow-hidden mb-4">
                                     {rp.images?.[0] ? (
-                                        <img
-                                            src={rp.images[0]}
-                                            alt={rp.name}
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                        />
+                                        <img src={rp.images[0]} alt={rp.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400">
-                                            No Image
-                                        </div>
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400">No Image</div>
                                     )}
                                 </div>
-
                                 <div className="mt-auto">
-                                    <h3 className="text-sm font-medium text-fg mb-1 group-hover:opacity-70 transition-opacity">
-                                        {rp.name}
-                                    </h3>
-                                    <p className="text-sm text-fg">
-                                        {formatPrice(rp.finalPrice)}
-                                    </p>
+                                    <h3 className="text-sm font-medium text-fg mb-1 group-hover:opacity-70 transition-opacity">{rp.name}</h3>
+                                    <p className="text-sm text-fg">{formatPrice(rp.finalPrice)}</p>
                                 </div>
                             </Link>
                         ))}

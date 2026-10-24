@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
+import { useLocalization } from '../context/LocalizationContext'
 
 const STATUS_STYLES = {
     PENDING:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
@@ -23,6 +24,7 @@ const TABS = [
 
 export default function MyOrders() {
     const { cart } = useCart()
+    const { formatPrice } = useLocalization()
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState('ALL')
@@ -108,6 +110,42 @@ export default function MyOrders() {
                     </button>
                 ))}
             </div>
+
+            {/* CART TAB */}
+            {tab === 'CART' && (
+                cart?.items?.length === 0 ? (
+                    <div className="py-20 text-center">
+                        <p className="text-sm text-muted mb-6">Your cart is empty.</p>
+                        <Link to="/shop" className="btn-primary">Browse Products</Link>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-xs text-muted mb-4">
+                            Items currently in your cart — {cart.items.length} item(s), subtotal {formatPrice(cart.subtotal)}
+                        </p>
+                        {cart.items.map(item => (
+                            <div key={item.id} className="card p-4 flex gap-4 items-center">
+                                <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
+                                    {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
+                                </div>
+                                <div className="flex-1 text-sm">
+                                    <Link to={`/product/${item.slug}`} className="text-fg hover:underline">
+                                        {item.productName}
+                                    </Link>
+                                    <p className="text-xs text-muted mt-1">
+                                        {item.variantName && `Color: ${item.variantName} · `}
+                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · {formatPrice(item.unitPrice)}
+                                    </p>
+                                </div>
+                                <span className="text-sm text-fg">{formatPrice(item.lineTotal)}</span>
+                            </div>
+                        ))}
+                        <div className="pt-4">
+                            <Link to="/cart" className="btn-primary">Go to Cart</Link>
+                        </div>
+                    </div>
+                )
+            )}
 
             {/* ORDERS TAB(S) */}
             {tab !== 'CART' && (

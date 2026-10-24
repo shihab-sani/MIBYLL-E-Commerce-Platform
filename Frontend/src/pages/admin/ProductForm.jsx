@@ -8,6 +8,8 @@ const empty = {
     name: '', slug: '', description: '', price: '', discountPercent: 0,
     stockQuantity: 0, brand: '', featured: false, newArrival: false, active: true,
     categoryId: '', images: [],
+    sizeType: 'CLOTHING',
+    variants: [],
 }
 
 export default function ProductForm() {
@@ -43,6 +45,8 @@ export default function ProductForm() {
                     active: p.active,
                     categoryId: p.categoryId || '',
                     images: p.images || [],
+                    sizeType: p.sizeType || 'CLOTHING',
+                    variants: p.variants || [],
                 })
             })
             .catch(() => toast.error('Failed to load product'))
@@ -67,6 +71,8 @@ export default function ProductForm() {
             active: form.active,
             categoryId: form.categoryId || null,
             images: form.images,
+            sizeType: form.sizeType,
+            variants: form.variants,
         }
         try {
             if (isEdit) {
@@ -162,9 +168,10 @@ export default function ProductForm() {
                     </div>
                 </section>
 
-                {/* ORGANISATION */}
+                {/* ORGANISATION & VARIANTS */}
                 <section className="card p-6 space-y-5">
                     <h2 className="text-[11px] uppercase tracking-widest2 text-fg">Organisation</h2>
+
                     <div>
                         <label className="label-field">Category</label>
                         <select value={form.categoryId} onChange={e => set('categoryId', e.target.value)}
@@ -174,7 +181,76 @@ export default function ProductForm() {
                         </select>
                     </div>
 
-                    <div className="grid sm:grid-cols-3 gap-4 pt-2">
+                    <div>
+                        <label className="label-field">Size Type</label>
+                        <select value={form.sizeType} onChange={e => set('sizeType', e.target.value)} className="input-field max-w-md">
+                            <option value="CLOTHING">Clothing (XS, S, M, L, XL)</option>
+                            <option value="SHOES">Shoes (38, 39, 40...)</option>
+                            <option value="RINGS">Rings (5, 6, 7, 8...)</option>
+                            <option value="NONE">No Sizes</option>
+                        </select>
+                    </div>
+
+                    {/* DESIGN / COLOR VARIANTS (Moved Here) */}
+                    <div className="pt-4 border-t border-c">
+                        <div className="flex justify-between items-center mb-3">
+                            <label className="label-field mb-0">Design / Color Variants</label>
+                            <button
+                                type="button"
+                                onClick={() => set('variants', [...form.variants, { name: '', imageUrl: '' }])}
+                                className="text-[10px] uppercase underline text-fg hover:opacity-60 transition-opacity"
+                            >
+                                + Add Variant
+                            </button>
+                        </div>
+
+                        {form.variants.length === 0 && (
+                            <p className="text-[10px] text-muted mb-2">
+                                No variants added. Add a variant if this product comes in multiple colors or designs.
+                            </p>
+                        )}
+
+                        <div className="space-y-3">
+                            {form.variants.map((v, i) => (
+                                <div key={i} className="flex gap-4 items-end border border-c p-4 rounded bg-surface/50">
+                                    <div className="flex-1">
+                                        <label className="label-field">Variant Name (e.g. Black)</label>
+                                        <input
+                                            value={v.name}
+                                            onChange={e => {
+                                                const copy = [...form.variants]
+                                                copy[i] = { ...copy[i], name: e.target.value }
+                                                set('variants', copy)
+                                            }}
+                                            className="input-field"
+                                        />
+                                    </div>
+
+                                    <div className="w-24">
+                                        <ImageUploader
+                                            value={v.imageUrl ? [v.imageUrl] : []}
+                                            multiple={false}
+                                            onChange={(urls) => {
+                                                const copy = [...form.variants]
+                                                copy[i] = { ...copy[i], imageUrl: urls[0] || '' }
+                                                set('variants', copy)
+                                            }}
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => set('variants', form.variants.filter((_, j) => j !== i))}
+                                        className="text-red-500 pb-3"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-3 gap-4 pt-4 border-t border-c">
                         {checkboxes.map(cb => (
                             <label key={cb.key}
                                    className="flex items-start gap-3 cursor-pointer p-4 border border-cbord">
@@ -185,13 +261,13 @@ export default function ProductForm() {
                                     className="w-4 h-4 mt-0.5 accent-black dark:accent-white"
                                 />
                                 <span>
-                  <span className="block text-xs uppercase tracking-widest2 text-fg">
-                    {cb.label}
-                  </span>
-                  <span className="block text-[10px] text-muted mt-1">
-                    {cb.hint}
-                  </span>
-                </span>
+                                    <span className="block text-xs uppercase tracking-widest2 text-fg">
+                                        {cb.label}
+                                    </span>
+                                    <span className="block text-[10px] text-muted mt-1">
+                                        {cb.hint}
+                                    </span>
+                                </span>
                             </label>
                         ))}
                     </div>

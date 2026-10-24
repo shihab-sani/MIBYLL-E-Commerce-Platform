@@ -24,17 +24,16 @@ export function CartProvider({ children }) {
 
     useEffect(() => { fetchCart() }, [fetchCart])
 
-    const addToCart = async (productId, quantity = 1, size = '') => {
-        const { data } = await api.post('/cart/items', { productId, quantity, size })
+    const addToCart = async (productId, quantity = 1, size = '', variantName = '') => {
+        const { data } = await api.post('/cart/items', { productId, quantity, size, variantName })
         setCart(data)
         return data
     }
 
-    const updateItem = async (itemId, quantity, size = '') => {
-        const { data } = await api.put(`/cart/items/${itemId}`, { quantity, size })
+    const updateItem = async (itemId, quantity, size = '', variantName = '') => {
+        const { data } = await api.put(`/cart/items/${itemId}`, { quantity, size, variantName })
         setCart(data)
     }
-
     const removeItem = async (itemId) => {
         const { data } = await api.delete(`/cart/items/${itemId}`)
         setCart(data)
