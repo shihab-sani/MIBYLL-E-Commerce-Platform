@@ -51,9 +51,10 @@ public class CartService {
             throw ApiException.badRequest("Only " + product.getStockQuantity() + " items in stock");
 
         String size = req.size() == null ? "" : req.size();
+        String variant = req.variantName() == null ? "" : req.variantName();
 
         CartItem existing = cartItemRepository
-                .findByCartIdAndProductIdAndSize(cart.getId(), product.getId(), size)
+                .findByCartIdAndProductIdAndSizeAndVariantName(cart.getId(), product.getId(), size, variant)
                 .orElse(null);
 
         if (existing != null) {
@@ -67,6 +68,7 @@ public class CartService {
                     .product(product)
                     .quantity(req.quantity())
                     .size(size)
+                    .variantName(variant)
                     .build());
         }
 
@@ -75,7 +77,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartDto updateItem(String email, UUID itemId, int quantity, String newSize) {
+    public CartDto updateItem(String email, UUID itemId, int quantity, String newSize, String newVariant) {
         User user = loadUser(email);
         Cart cart = getOrCreateCart(user);
 
@@ -88,10 +90,11 @@ public class CartService {
             throw ApiException.badRequest("Only " + item.getProduct().getStockQuantity() + " in stock");
 
         String targetSize = (newSize == null || newSize.isBlank()) ? item.getSize() : newSize;
+        String targetVariant = (newVariant == null || newVariant.isBlank()) ? item.getVariantName() : newVariant;
 
         if (!targetSize.equals(item.getSize())) {
             CartItem existing = cartItemRepository
-                    .findByCartIdAndProductIdAndSize(cart.getId(), item.getProduct().getId(), targetSize)
+                    .findByCartIdAndProductIdAndSizeAndVariantName(cart.getId(), item.getProduct().getId(), targetSize, targetVariant)
                     .orElse(null);
 
             if (existing != null && !existing.getId().equals(itemId)) {
@@ -102,6 +105,7 @@ public class CartService {
                 cart.getItems().remove(item);
             } else {
                 item.setSize(targetSize);
+                item.setVariantName(targetVariant);
                 item.setQuantity(quantity);
             }
         } else {
@@ -155,7 +159,9 @@ public class CartService {
                 i.getQuantity(),
                 i.getSize(),
                 i.getLineTotal(),
-                i.getProduct().getStockQuantity()
+                i.getProduct().getStockQuantity(),
+                i.getVariantName(),
+                i.getProduct().getSizeType()
         )).toList();
 
         BigDecimal subtotal = items.stream()

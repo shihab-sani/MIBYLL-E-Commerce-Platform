@@ -10,7 +10,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
-    Optional<CartItem> findByCartIdAndProductIdAndSize(UUID cartId, UUID productId, String size);
+    Optional<CartItem> findByCartIdAndProductIdAndSizeAndVariantName(
+            UUID cartId, UUID productId, String size, String variantName
+    );
 
     @Modifying
     @Query("DELETE FROM CartItem c WHERE c.product.id = :productId")
