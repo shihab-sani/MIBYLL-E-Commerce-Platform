@@ -34,4 +34,6 @@ public class CartItem {
     public BigDecimal getLineTotal() {
         return product.getFinalPrice().multiply(BigDecimal.valueOf(quantity));
     }
+
+    private String variantName;
 }

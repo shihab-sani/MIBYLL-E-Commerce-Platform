@@ -77,4 +77,10 @@ public class Product {
                 .divide(BigDecimal.valueOf(100));
         return price.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
     }
+
+    private String sizeType;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<ProductVariant> variants = new java.util.ArrayList<>();
 }

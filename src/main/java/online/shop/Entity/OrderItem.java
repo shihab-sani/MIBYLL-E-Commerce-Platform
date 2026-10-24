@@ -40,4 +40,5 @@ public class OrderItem {
     private BigDecimal subtotal;
 
     private String size;
+    private String variantName;
 }
