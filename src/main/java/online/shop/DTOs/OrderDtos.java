@@ -11,7 +11,7 @@ import java.util.UUID;
 public class OrderDtos {
     public record OrderItemDto(
             UUID id, UUID productId, String productName, String imageUrl,
-            BigDecimal unitPrice, Integer quantity, BigDecimal subtotal, String size
+            BigDecimal unitPrice, Integer quantity, BigDecimal subtotal, String size, String variantName
     ) {}
 
     public record OrderRefundLogDto(
@@ -27,7 +27,7 @@ public class OrderDtos {
             String country, String city, String zipCode,
             boolean refundRequested, String refundReason,
             boolean refundApproved, boolean refundRejected, String refundRejectionReason,
-            List<OrderRefundLogDto> refundLogs // <-- NEW
+            List<OrderRefundLogDto> refundLogs
     ) {}
 
     public record PlaceOrderRequest(

@@ -11,7 +11,7 @@ public class CartDtos {
     public record CartItemDto(
             UUID id, UUID productId, String productName, String slug, String imageUrl,
             BigDecimal unitPrice, Integer quantity, String size, BigDecimal lineTotal,
-            Integer stockQuantity
+            Integer stockQuantity, String variantName, String sizeType
     ) {}
 
     public record CartDto(UUID id, List<CartItemDto> items, BigDecimal subtotal,
@@ -20,11 +20,12 @@ public class CartDtos {
     public record AddToCartRequest(
             @NotNull UUID productId,
             @NotNull @Min(1) Integer quantity,
-            String size
+            String size,
+            String variantName
     ) {}
 
     public record UpdateCartItemRequest(
             @NotNull @Min(1) Integer quantity,
-            String size
+            String size, String variantName
     ) {}
 }

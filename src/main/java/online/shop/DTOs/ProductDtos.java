@@ -13,7 +13,8 @@ public class ProductDtos {
             BigDecimal price, Integer discountPercent, BigDecimal finalPrice,
             Integer stockQuantity, String brand,
             boolean featured, boolean newArrival, boolean active,
-            UUID categoryId, String categoryName, List<String> images, LocalDateTime createdAt
+            UUID categoryId, String categoryName, List<String> images, LocalDateTime createdAt,
+            String sizeType, List<VariantDto> variants
     ) {}
 
     public record ProductRequest(
@@ -25,10 +26,12 @@ public class ProductDtos {
             @NotNull @Min(0) Integer stockQuantity,
             String brand,
             boolean featured,
-            boolean newArrival,          // <-- NEW (position matters!)
+            boolean newArrival,
             Boolean active,
             UUID categoryId,
-            List<String> images
+            List<String> images,
+            String sizeType,
+            List<VariantRequest> variants
     ) {}
 
     public record StockUpdateRequest(@NotNull @Min(0) Integer stockQuantity) {}
@@ -36,5 +39,8 @@ public class ProductDtos {
     public record DiscountUpdateRequest(@NotNull @Min(0) @Max(90) Integer discountPercent) {}
 
     public record PriceUpdateRequest(@NotNull @DecimalMin("0.0") BigDecimal price) {}
+
+    public record VariantDto(UUID id, String name, String imageUrl) {}
+    public record VariantRequest(String name, String imageUrl) {}
 
 }
