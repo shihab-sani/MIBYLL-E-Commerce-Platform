@@ -34,7 +34,7 @@ public class CartController {
     public ResponseEntity<CartDto> update(@AuthenticationPrincipal UserDetails ud,
                                           @PathVariable UUID itemId,
                                           @Valid @RequestBody UpdateCartItemRequest req) {
-        return ResponseEntity.ok(cartService.updateItem(ud.getUsername(), itemId, req.quantity(), req.size()));
+        return ResponseEntity.ok(cartService.updateItem(ud.getUsername(), itemId, req.quantity(), req.size(), req.variantName()));
     }
 
     @DeleteMapping("/items/{itemId}")
