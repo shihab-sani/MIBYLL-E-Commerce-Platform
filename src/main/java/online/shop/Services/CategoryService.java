@@ -22,8 +22,11 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final FileStorageService fileStorageService;
 
-    public List<CategoryDtos.CategoryDto> getAll() {
-        return categoryRepository.findAll().stream().map(this::toDto).toList();
+    public List<CategoryDto> getAll() {
+        return categoryRepository.findAll().stream()
+                .filter(c -> c.getParent() == null)
+                .map(this::toDto)
+                .toList();
     }
 
     public CategoryDtos.CategoryDto getById(UUID id) {
@@ -36,11 +39,18 @@ public class CategoryService {
         if (categoryRepository.existsByName(req.name())) {
             throw ApiException.badRequest("Category name already exists");
         }
+
+        Categories parent = null;
+        if (req.parentId() != null) {
+            parent = categoryRepository.findById(req.parentId()).orElse(null);
+        }
+
         Categories c = Categories.builder()
                 .name(req.name())
                 .slug(req.slug() != null && !req.slug().isBlank() ? slugify(req.slug()) : slugify(req.name()))
                 .description(req.description())
                 .imageUrl(req.imageUrl())
+                .parent(parent)
                 .build();
         return toDto(categoryRepository.save(c));
     }
@@ -50,12 +60,18 @@ public class CategoryService {
         Categories c = categoryRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Category not found"));
 
+        Categories parent = null;
+        if (req.parentId() != null) {
+            parent = categoryRepository.findById(req.parentId()).orElse(null);
+        }
+
         String oldImageUrl = c.getImageUrl();
 
         c.setName(req.name());
         c.setSlug(req.slug() != null && !req.slug().isBlank() ? slugify(req.slug()) : slugify(req.name()));
         c.setDescription(req.description());
         c.setImageUrl(req.imageUrl());
+        c.setParent(parent);
 
         CategoryDto saved = toDto(categoryRepository.save(c));
 
@@ -110,7 +126,13 @@ public class CategoryService {
     }
 
     private CategoryDto toDto(Categories c) {
-        return new CategoryDto(c.getId(), c.getName(), c.getSlug(), c.getDescription(), c.getImageUrl());
+        List<CategoryDto> subs = c.getSubcategories() != null
+                ? c.getSubcategories().stream().map(this::toDto).toList()
+                : List.of();
+
+        return new CategoryDto(
+                c.getId(), c.getName(), c.getSlug(), c.getDescription(), c.getImageUrl(), subs
+        );
     }
 
 }

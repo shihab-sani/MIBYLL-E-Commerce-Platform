@@ -3,6 +3,8 @@ package online.shop.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -26,4 +28,13 @@ public class Categories {
     private String description;
 
     private String imageUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Categories parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("name ASC")
+    @Builder.Default
+    private List<Categories> subcategories = new ArrayList<>();
 }
