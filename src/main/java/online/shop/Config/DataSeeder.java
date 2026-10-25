@@ -59,17 +59,31 @@ public class DataSeeder implements CommandLineRunner {
 
         /* ---------- CATEGORIES ---------- */
         if (categoryRepository.count() == 0) {
-            List<Categories> cats = List.of(
-                    Categories.builder().name("Women").slug("women")
-                            .imageUrl("https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200").build(),
-                    Categories.builder().name("Men").slug("men")
-                            .imageUrl("https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1200").build(),
-                    Categories.builder().name("Accessories").slug("accessories")
-                            .imageUrl("https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=1200").build(),
-                    Categories.builder().name("Footwear").slug("footwear")
-                            .imageUrl("https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200").build()
-            );
-            categoryRepository.saveAll(cats);
+            // 1. Main Categories
+            Categories women = categoryRepository.save(Categories.builder().name("Women").slug("women").imageUrl("https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200").build());
+            Categories men = categoryRepository.save(Categories.builder().name("Men").slug("men").imageUrl("https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1200").build());
+            Categories accessories = categoryRepository.save(Categories.builder().name("Accessories").slug("accessories").imageUrl("https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=1200").build());
+            Categories footwear = categoryRepository.save(Categories.builder().name("Footwear").slug("footwear").imageUrl("https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200").build());
+
+            // 2. Subcategories
+            categoryRepository.saveAll(List.of(
+                    Categories.builder().name("Dresses").slug("dresses").parent(women).build(),
+                    Categories.builder().name("Tops").slug("tops").parent(women).build(),
+                    Categories.builder().name("Knitwear").slug("knitwear").parent(women).build(),
+
+                    Categories.builder().name("Shirts").slug("shirts").parent(men).build(),
+                    Categories.builder().name("Trousers").slug("trousers").parent(men).build(),
+                    Categories.builder().name("Suits").slug("suits").parent(men).build(),
+
+                    Categories.builder().name("Jewelry").slug("jewelry").parent(accessories).build(),
+                    Categories.builder().name("Watches").slug("watches").parent(accessories).build(),
+                    Categories.builder().name("Bags").slug("bags").parent(accessories).build(),
+
+                    Categories.builder().name("Boots").slug("boots").parent(footwear).build(),
+                    Categories.builder().name("Sneakers").slug("sneakers").parent(footwear).build(),
+                    Categories.builder().name("Heels").slug("heels").parent(footwear).build()
+            ));
+            System.out.println(">> Seeded main & sub categories.");
         }
 
         /* ---------- PRODUCTS ---------- */
@@ -147,52 +161,32 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         /* ---------- 2. SEED TOP ---------- */
-        if (bannerRepository.countByPosition("TOP") == 0) {
-            bannerService.create(new BannerRequest(
-                    "The Art of\nQuiet Luxury",
-                    "Autumn / Winter Collection",
-                    "Explore the Collection",
-                    "/shop",
-                    "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=2000",
-                    "IMAGE", "TOP", null, 0, true
-            ));
+        if (bannerRepository.countByPosition("EDITORIAL") == 0) {
             bannerService.create(new BannerRequest(
                     "Crafted Slowly",
                     "New Season",
-                    "Shop New Arrivals",
+                    "SHOP NEW ARRIVALS",
                     "/shop?sort=newest",
-                    "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=2000",
-                    "IMAGE", "TOP", null, 1, true
+                    "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200",
+                    "IMAGE", "EDITORIAL", null, 0, true
             ));
             bannerService.create(new BannerRequest(
                     "Timeless Pieces",
                     "For Every Day",
-                    "Discover",
-                    "/shop?category=accessories",
-                    "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=2000",
-                    "IMAGE", "TOP", null, 2, true
-            ));
-            System.out.println(">> Seeded 3 TOP banners.");
-        }
-
-        /* ---------- 3. SEED BOTTOM ---------- */
-        if (bannerRepository.countByPosition("BOTTOM") == 0) {
-            bannerService.create(new BannerRequest(
-                    null, null, null, null,
-                    "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=2000",
-                    "IMAGE", "BOTTOM", null, 0, true
+                    "DISCOVER",
+                    "/shop",
+                    "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1200",
+                    "IMAGE", "EDITORIAL", null, 1, true
             ));
             bannerService.create(new BannerRequest(
-                    null, null, null, null,
-                    "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=2000",
-                    "IMAGE", "BOTTOM", null, 1, true
+                    "Our Craftsmanship",
+                    "Quality Materials",
+                    "EXPLORE",
+                    "/shop",
+                    "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200",
+                    "IMAGE", "EDITORIAL", null, 2, true
             ));
-            bannerService.create(new BannerRequest(
-                    null, null, null, null,
-                    "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=2000",
-                    "IMAGE", "BOTTOM", null, 2, true
-            ));
-            System.out.println(">> Seeded 3 BOTTOM banners.");
+            System.out.println(">> Seeded 3 EDITORIAL banners.");
         }
     }
 
