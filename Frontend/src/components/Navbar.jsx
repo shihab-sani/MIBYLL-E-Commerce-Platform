@@ -2,47 +2,68 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { useLocalization } from '../context/LocalizationContext'
 import ThemeToggle from './ThemeToggle'
 import api from '../api/axios'
-import { useLocalization } from '../context/LocalizationContext'
 
 export default function Navbar() {
-    const { user, logout, isAdmin, isAdminPanelUser, isAuthenticated } = useAuth()
+    const { user, logout, isAdminPanelUser, isAuthenticated } = useAuth()
     const { cart } = useCart()
-    const { country, language, countries, languages, setCountry, setLanguage, t } = useLocalization()
+    const { country, countries, setCountry } = useLocalization()
     const navigate = useNavigate()
     const location = useLocation()
 
     const [categories, setCategories] = useState([])
-    const [open, setOpen] = useState(false)
-    const [catOpen, setCatOpen] = useState(false)
-    const [mobileCatOpen, setMobileCatOpen] = useState(false)
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [activeCategory, setActiveCategory] = useState(null)
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchValue, setSearchValue] = useState('')
-    const dropRef = useRef(null)
+
+    const [isScrolled, setIsScrolled] = useState(false)
+    const [isHovered, setIsHovered] = useState(false)
+
     const searchRef = useRef(null)
 
     useEffect(() => {
         api.get('/categories').then(r => setCategories(r.data)).catch(() => {})
     }, [location.pathname])
 
+    // 1. Reset everything when navigating to a new page
+    useEffect(() => {
+        setSearchOpen(false)
+        setDrawerOpen(false)
+    }, [location.pathname, location.search])
+
+    // 2. THE FIX: Reset the subcategory panel whenever the drawer closes
+    useEffect(() => {
+        if (!drawerOpen) {
+            // Wait for the slide-out animation (500ms) to finish before resetting
+            const timer = setTimeout(() => setActiveCategory(null), 500)
+            return () => clearTimeout(timer)
+        }
+    }, [drawerOpen])
+
     useEffect(() => {
         const onDoc = (e) => {
-            if (dropRef.current && !dropRef.current.contains(e.target)) setCatOpen(false)
             if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false)
         }
         document.addEventListener('mousedown', onDoc)
         return () => document.removeEventListener('mousedown', onDoc)
     }, [])
 
-    useEffect(() => { setSearchOpen(false) }, [location.pathname, location.search])
+    useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 50)
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
 
-    const handleLogout = () => { logout(); navigate('/') }
+    useEffect(() => {
+        if (drawerOpen) document.body.style.overflow = 'hidden'
+        else document.body.style.overflow = 'unset'
+        return () => { document.body.style.overflow = 'unset' }
+    }, [drawerOpen])
 
-    const goCategory = (slug) => {
-        setCatOpen(false); setMobileCatOpen(false); setOpen(false)
-        navigate(`/shop?category=${slug}`)
-    }
+    const handleLogout = () => { logout(); navigate('/'); setDrawerOpen(false) }
 
     const submitSearch = (e) => {
         e.preventDefault()
@@ -53,142 +74,65 @@ export default function Navbar() {
         navigate(`/shop?q=${encodeURIComponent(q)}`)
     }
 
+    const isSolid = isScrolled || isHovered
+
     return (
         <>
-            <header className="sticky top-0 z-50 backdrop-blur border-b border-c"
-                    style={{ background: 'rgb(var(--paper) / 0.95)' }}>
+            {/* HEADER */}
+            <header
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+                    isSolid
+                        ? 'bg-[#050510] text-white shadow-xl py-0'
+                        : 'bg-transparent text-white mix-blend-difference py-4'
+                }`}
+            >
                 <div className="max-w-[1500px] mx-auto px-5 lg:px-10">
-                    <div className="flex items-center justify-between h-16 lg:h-20">
+                    <div className="grid grid-cols-3 items-center h-16 lg:h-20">
+                        <div className="flex justify-start">
+                            <button onClick={() => setDrawerOpen(true)} aria-label="Menu" className="hover:opacity-60 transition-opacity">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                    <path d="M8 4v16M16 4v16" />
+                                </svg>
+                            </button>
+                        </div>
 
-                        <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Menu">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" strokeWidth="1.2">
-                                <path d="M3 6h18M3 12h18M3 18h18" />
-                            </svg>
-                        </button>
+                        <div className="flex justify-center">
+                            <Link to="/" className="text-2xl lg:text-3xl font-serif tracking-[0.35em] uppercase">
+                                Mibyll
+                            </Link>
+                        </div>
 
-                        <Link to="/" className="text-xl lg:text-2xl font-serif tracking-[0.35em] uppercase text-fg">
-                            Mibyll
-                        </Link>
-
-                        <nav className="hidden lg:flex items-center gap-9">
-                            <div className="relative" ref={dropRef}>
-                                <button onClick={() => setCatOpen(v => !v)}
-                                        className="nav-link flex items-center gap-2 text-fg">
-                                    {t('nav.categories')}
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" strokeWidth="2"
-                                         className={`transition-transform ${catOpen ? 'rotate-180' : ''}`}>
-                                        <path d="M6 9l6 6 6-6" />
-                                    </svg>
-                                </button>
-
-                                {catOpen && (
-                                    <div className="absolute top-full left-0 mt-4 min-w-[220px] py-2 shadow-lg border border-c animate-fade-in"
-                                         style={{ background: 'rgb(var(--surface))' }}>
-                                        {categories.length === 0 ? (
-                                            <p className="px-5 py-3 text-[11px] uppercase tracking-widest2 text-muted">
-                                                {t('nav.noCategories')}
-                                            </p>
-                                        ) : categories.map(c => (
-                                            <button key={c.id} onClick={() => goCategory(c.slug)}
-                                                    className="block w-full text-left px-5 py-3 text-[11px] uppercase
-                                         tracking-widest2 text-fg hover:opacity-60 transition-opacity">
-                                                {c.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <Link to="/shop" className="nav-link text-fg">{t('nav.all')}</Link>
-                        </nav>
-
-                        <div className="flex items-center gap-5">
-                            {/* Search */}
+                        <div className="flex justify-end items-center gap-6">
                             <div className="relative" ref={searchRef}>
-                                <button onClick={() => setSearchOpen(v => !v)}
-                                        aria-label="Search"
-                                        className="text-fg hover:opacity-60 transition-opacity">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" strokeWidth="1.4">
+                                <button onClick={() => setSearchOpen(v => !v)} aria-label="Search" className="hover:opacity-60 transition-opacity">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
                                         <circle cx="11" cy="11" r="7" />
                                         <path d="m20 20-3.5-3.5" />
                                     </svg>
                                 </button>
-
                                 {searchOpen && (
-                                    <form onSubmit={submitSearch}
-                                          className="absolute top-full right-0 mt-4 w-[min(90vw,360px)]
-                                   border border-c shadow-lg animate-slide-in"
-                                          style={{ background: 'rgb(var(--surface))' }}>
+                                    <form onSubmit={submitSearch} className="absolute top-full right-0 mt-6 w-[min(90vw,360px)] border border-white/20 bg-black/95 text-white shadow-2xl backdrop-blur-md animate-fade-in">
                                         <input
                                             autoFocus
                                             value={searchValue}
                                             onChange={e => setSearchValue(e.target.value)}
                                             placeholder="Search products…"
-                                            className="w-full px-4 py-3 text-sm bg-transparent text-fg
-                                 focus:outline-none"
+                                            className="w-full px-5 py-4 text-sm bg-transparent focus:outline-none placeholder:text-gray-400"
                                         />
                                     </form>
                                 )}
                             </div>
-                            {/* Location / Language switcher */}
-                            <div className="relative hidden lg:flex items-center gap-2">
-                                <select
-                                    value={country?.code || 'US'}
-                                    onChange={(e) => setCountry(e.target.value)}
-                                    className="text-[10px] uppercase tracking-widest2 bg-transparent border-none
-                   text-fg focus:outline-none cursor-pointer"
-                                >
-                                    {countries.map((c) => (
-                                        <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
-                                    ))}
-                                </select>
-
-                                <select
-                                    value={language}
-                                    onChange={(e) => setLanguage(e.target.value)}
-                                    className="text-[10px] uppercase tracking-widest2 bg-transparent border-none
-                   text-fg focus:outline-none cursor-pointer"
-                                >
-                                    {languages.map((l) => (
-                                        <option key={l.code} value={l.code}>{l.code.toUpperCase()}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <ThemeToggle />
-
-                            {isAdmin && (
-                                <Link to="/admin" className="hidden lg:block nav-link text-fg">{t('nav.admin')}</Link>
-                            )}
-
-                            {isAuthenticated ? (
-                                <div className="hidden lg:flex items-center gap-4">
-                                    {!isAdminPanelUser && (
-                                        <>
-                                            <Link to="/profile" className="nav-link text-fg">{t('nav.profile')}</Link>
-                                            <Link to="/orders" className="nav-link text-fg">{t('nav.orders')}</Link>
-                                        </>
-                                    )}
-                                    <button onClick={handleLogout} className="nav-link text-fg">{t('nav.logout')}</button>
-                                </div>
-                            ) : (
-                                <Link to="/login" className="hidden lg:block nav-link text-fg">{t('nav.login')}</Link>
-                            )}
-
-                            <Link to="/cart" className="relative text-fg">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" strokeWidth="1.2">
+                            <Link to="/cart" className="relative hover:opacity-60 transition-opacity">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
                                     <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                                     <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
                                 </svg>
                                 {cart?.totalItems > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-ink text-white text-[9px] w-4 h-4
-                                   rounded-full flex items-center justify-center">
-                    {cart.totalItems}
-                  </span>
+                                    <span className="absolute -top-2 -right-2 bg-white text-red-600 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                                        {cart.totalItems}
+                                    </span>
                                 )}
                             </Link>
                         </div>
@@ -196,92 +140,144 @@ export default function Navbar() {
                 </div>
             </header>
 
-            {open && (
-                <div className="fixed inset-0 z-[60] lg:hidden">
-                    <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-                    <div className="absolute left-0 top-0 h-full w-[80%] p-8 overflow-y-auto no-scrollbar
-                          animate-slide-in"
-                         style={{ background: 'rgb(var(--paper))' }}>
-                        <div className="flex items-center justify-between mb-10">
-                            <button onClick={() => setOpen(false)} className="text-2xl leading-none text-fg">×</button>
-                            <ThemeToggle />
-                        </div>
+            {/* MULTI-TIER SLIDING DRAWER */}
+            <div className={`fixed inset-0 z-[100] transition-opacity duration-300 ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
 
-                        <form onSubmit={(e) => {
-                            e.preventDefault()
-                            const q = searchValue.trim()
-                            if (!q) return
-                            setOpen(false)
-                            setSearchValue('')
-                            navigate(`/shop?q=${encodeURIComponent(q)}`)
-                        }} className="mb-8">
-                            <input value={searchValue} onChange={e => setSearchValue(e.target.value)}
-                                   placeholder="Search products…"
-                                   className="input-field" />
-                        </form>
+                {/* Backdrop */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
 
-                        <nav className="flex flex-col gap-1">
-                            <button onClick={() => setMobileCatOpen(v => !v)}
-                                    className="flex items-center justify-between text-lg font-serif
-                                 tracking-[0.2em] uppercase py-3 text-fg">
-                                {t('nav.categories')}
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" strokeWidth="2"
-                                     className={`transition-transform ${mobileCatOpen ? 'rotate-180' : ''}`}>
-                                    <path d="M6 9l6 6 6-6" />
-                                </svg>
-                            </button>
+                {/* Main Drawer Container */}
+                <div className={`absolute left-0 top-0 h-full w-[320px] sm:w-[380px] bg-surface shadow-2xl overflow-hidden
+                                transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-                            {mobileCatOpen && (
-                                <div className="pl-4 flex flex-col gap-3 mb-3 animate-fade-in">
-                                    {categories.length === 0 ? (
-                                        <p className="text-[11px] uppercase tracking-widest2 text-muted">{t('nav.noCategories')}</p>
-                                    ) : categories.map(c => (
-                                        <button key={c.id} onClick={() => goCategory(c.slug)}
-                                                className="text-left text-sm uppercase tracking-widest2
-                                       text-muted hover:text-fg transition-colors">
+                    {/* WRAPPER THAT SLIDES BETWEEN PANELS */}
+                    <div className={`relative w-full h-full transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
+                                    ${activeCategory ? '-translate-x-full' : 'translate-x-0'}`}>
+
+                        {/* --- PANEL 1: MAIN MENU --- */}
+                        <div className="absolute top-0 left-0 w-full h-full flex flex-col bg-surface text-fg">
+
+                            <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
+                                <button onClick={() => setDrawerOpen(false)} className="hover:opacity-50 transition-opacity text-fg">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <span className="text-xl font-serif tracking-[0.2em] uppercase text-fg">Menu</span>
+                                <div className="w-6"></div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto py-6">
+                                <nav className="flex flex-col">
+                                    {categories.map(c => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => setActiveCategory(c)}
+                                            className="px-8 py-5 text-left text-sm uppercase tracking-widest2 border-b border-c flex justify-between items-center transition-all hover:bg-cbord/10 text-fg/80 hover:text-fg"
+                                        >
                                             {c.name}
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M9 18l6-6-6-6" />
+                                            </svg>
                                         </button>
                                     ))}
-                                </div>
-                            )}
+                                </nav>
 
-                            <Link to="/shop" onClick={() => setOpen(false)}
-                                  className="text-lg font-serif tracking-[0.2em] uppercase py-3 text-fg">
-                                {t('nav.all')}
-                            </Link>
-                        </nav>
-
-                        <div className="mt-12 pt-8 border-t border-c flex flex-col gap-5">
-                            {isAdmin && <Link to="/admin" onClick={() => setOpen(false)} className="nav-link text-fg">{t('nav.adminPanel')}</Link>}
-                            {isAuthenticated ? (
-                                <>
-                                    {/* THE FIX: Wrapped the Profile link in the check */}
-                                    {!isAdminPanelUser && (
+                                {/* Account & Settings */}
+                                <div className="mt-12 px-8 pb-12 flex flex-col gap-6">
+                                    <h3 className="text-[10px] text-muted uppercase tracking-widest border-b border-c pb-2">Account</h3>
+                                    {isAuthenticated ? (
                                         <>
-                                            <Link to="/profile" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                                {t('nav.profile')}
-                                            </Link>
-                                            <Link to="/orders" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                                {t('nav.orders')}
-                                            </Link>
+                                            {isAdminPanelUser && <Link to="/admin" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm">Admin Panel</Link>}
+                                            {!isAdminPanelUser && (
+                                                <>
+                                                    <Link to="/profile" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm">Profile</Link>
+                                                    <Link to="/orders" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm">My Orders</Link>
+                                                </>
+                                            )}
+                                            <button onClick={handleLogout} className="text-left hover:opacity-60 text-red-500 text-sm">Logout</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Link to="/login" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm">Sign In</Link>
+                                            <Link to="/register" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm">Create Account</Link>
                                         </>
                                     )}
-                                    <button onClick={() => { handleLogout(); setOpen(false) }}
-                                            className="nav-link text-left text-fg">
-                                        {t('nav.logout')}
-                                    </button>
-                                </>
-                            ) : (
-                                <Link to="/login" onClick={() => setOpen(false)} className="nav-link text-fg">
-                                    {t('nav.login')}
-                                </Link>
-                            )}
+
+                                    <div className="mt-6 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] uppercase tracking-widest text-muted">Theme</span>
+                                            <ThemeToggle />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] uppercase tracking-widest text-muted">Country</span>
+                                            <select value={country?.code || 'US'} onChange={(e) => setCountry(e.target.value)} className="bg-surface text-xs border border-c px-2 py-1 focus:outline-none text-fg">
+                                                {countries.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        {user && <p className="mt-10 text-xs text-muted">{user.email}</p>}
+
+                        {/* --- PANEL 2: SUBCATEGORIES --- */}
+                        <div className="absolute top-0 left-full w-full h-full flex flex-col bg-surface text-fg">
+
+                            <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
+                                <button onClick={() => setActiveCategory(null)} className="flex items-center gap-2 hover:opacity-50 transition-opacity text-fg text-xs uppercase tracking-wider font-medium">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M15 18l-6-6 6-6"/>
+                                    </svg>
+                                    Back
+                                </button>
+                                <span className="text-lg font-serif tracking-[0.2em] uppercase text-fg">
+                                    {activeCategory?.name || 'Category'}
+                                </span>
+                                <button onClick={() => setDrawerOpen(false)} className="hover:opacity-50 transition-opacity text-fg">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8">
+                                <Link
+                                    to={`/shop?category=${activeCategory?.slug}`}
+                                    onClick={() => setDrawerOpen(false)}
+                                    className="block text-center bg-surface border border-c text-fg px-6 py-4 text-xs uppercase tracking-widest2 hover:border-fg transition-colors mb-8"
+                                >
+                                    See All {activeCategory?.name}
+                                </Link>
+
+                                <div className="flex flex-col">
+                                    {(activeCategory?.subcategories || []).map(sub => (
+                                        <Link
+                                            key={sub.slug}
+                                            to={`/shop?category=${activeCategory.slug}&q=${sub.name}`}
+                                            onClick={() => setDrawerOpen(false)}
+                                            className="group flex justify-between items-center py-4 border-b border-c hover:border-fg transition-colors"
+                                        >
+                                            <span className="text-xs uppercase tracking-widest2 text-fg">
+                                                {sub.name}
+                                            </span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted group-hover:text-fg transition-colors">
+                                                <path d="M9 18l6-6-6-6" />
+                                            </svg>
+                                        </Link>
+                                    ))}
+
+                                    {(!activeCategory?.subcategories || activeCategory.subcategories.length === 0) && (
+                                        <div className="text-center text-muted py-10 text-xs">
+                                            Explore our full collection of {activeCategory?.name}.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-            )}
+            </div>
         </>
     )
 }
