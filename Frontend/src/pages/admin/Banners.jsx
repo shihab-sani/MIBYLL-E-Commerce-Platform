@@ -181,7 +181,7 @@ export default function Banners() {
                 <div>
                     <label className="label-field">Position *</label>
                     <div className="flex gap-3">
-                        {['TOP', 'BOTTOM'].map(pos => (
+                        {['TOP', 'EDITORIAL', 'BOTTOM'].map(pos => (
                             <button
                                 type="button"
                                 key={pos}
@@ -192,7 +192,11 @@ export default function Banners() {
                                     : 'text-fg hover:border-fg'}`}
                                 style={form.position === pos ? {} : borderColor}
                             >
-                                {pos === 'TOP' ? 'Top (Hero)' : 'Bottom (Reviews)'}
+                                {pos === 'TOP'
+                                ? 'Top (Hero)'
+                                : pos === 'EDITORIAL'
+                                    ? 'Editorial (Homepage)'
+                                    : 'Bottom (Slider)'}
                             </button>
                         ))}
                     </div>

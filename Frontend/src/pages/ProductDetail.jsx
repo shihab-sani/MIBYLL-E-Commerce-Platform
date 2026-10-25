@@ -111,7 +111,7 @@ export default function ProductDetail() {
     const soldOut = product.stockQuantity === 0
 
     return (
-        <div className="max-w-[1500px] mx-auto px-5 lg:px-10 py-10 lg:py-16">
+        <div className="max-w-[1500px] mx-auto px-5 lg:px-10 pt-32 pb-10 lg:pb-16">
             <nav className="text-[10px] uppercase tracking-widest2 text-neutral-500 mb-8">
                 <Link to="/" className="hover:text-ink">Home</Link>
                 <span className="mx-2">/</span>

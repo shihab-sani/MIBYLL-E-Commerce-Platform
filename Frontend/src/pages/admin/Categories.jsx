@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
 
-const empty = { name: '', slug: '', description: '', images: [] }
+const empty = { name: '', slug: '', description: '', images: [], parentId: null }
 
 export default function Categories() {
     const [categories, setCategories] = useState([])
@@ -24,6 +24,7 @@ export default function Categories() {
             slug: form.slug || null,
             description: form.description,
             imageUrl: form.images[0] || null,
+            parentId: form.parentId || null,
         }
         try {
             if (editingId) {
@@ -46,6 +47,7 @@ export default function Categories() {
             slug: c.slug,
             description: c.description || '',
             images: c.imageUrl ? [c.imageUrl] : [],
+            parentId: c.parentId || null,
         })
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -85,6 +87,19 @@ export default function Categories() {
                         <label className="label-field">Slug (optional)</label>
                         <input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })}
                                className="input-field" placeholder="auto" />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="label-field">Parent Category (Leave blank for Main Category)</label>
+                        <select
+                            value={form.parentId || ''}
+                            onChange={e => setForm({ ...form, parentId: e.target.value || null })}
+                            className="input-field"
+                        >
+                            <option value="">— None (Main Category) —</option>
+                            {categories.filter(c => !c.parentId && c.id !== editingId).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="md:col-span-2">
                         <label className="label-field">Description</label>
