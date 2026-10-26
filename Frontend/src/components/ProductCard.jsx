@@ -28,8 +28,7 @@ export default function ProductCard({ product }) {
                     </span>
                 )}
                 {product.stockQuantity === 0 && (
-                    <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest2 px-2.5 py-1
-                                     bg-surface text-fg border border-c">
+                    <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest2 px-2.5 py-1 bg-surface text-fg border border-c">
                         {t('product.soldOut')}
                     </span>
                 )}
@@ -43,9 +42,7 @@ export default function ProductCard({ product }) {
                 <div className="mt-2 flex items-baseline gap-2">
                     <span className="text-sm text-fg">{formatPrice(product.finalPrice)}</span>
                     {hasDiscount && (
-                        <span className="text-xs text-muted line-through">
-                            {formatPrice(product.price)}
-                        </span>
+                        <span className="text-xs text-muted line-through">{formatPrice(product.price)}</span>
                     )}
                 </div>
             </div>

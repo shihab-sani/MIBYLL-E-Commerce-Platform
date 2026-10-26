@@ -1,9 +1,10 @@
+import { Fragment } from 'react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
 
-const empty = { name: '', slug: '', description: '', images: [], parentId: null }
+const empty = { name: '', slug: '', description: '', images: [], parentId: '' }
 
 export default function Categories() {
     const [categories, setCategories] = useState([])
@@ -47,9 +48,18 @@ export default function Categories() {
             slug: c.slug,
             description: c.description || '',
             images: c.imageUrl ? [c.imageUrl] : [],
-            parentId: c.parentId || null,
+            parentId: c.parentId || '',
         })
         window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const move = async (c, direction) => {
+        try {
+            await api.patch(`/admin/categories/${c.id}/move?direction=${direction}`)
+            load()
+        } catch {
+            toast.error('Failed to move category')
+        }
     }
 
     const remove = async (c) => {
@@ -64,11 +74,15 @@ export default function Categories() {
     const borderColor = { borderColor: 'rgb(var(--cbord))' }
     const surfaceBg   = { background: 'rgb(var(--surface))' }
 
+    // Find the currently editing category to check if it has children
+    const editingCategory = categories.find(c => c.id === editingId)
+    const hasSubcategories = editingCategory?.subcategories?.length > 0
+
     return (
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-serif text-fg">Categories</h1>
-                <p className="text-xs text-muted mt-1">Organise your catalogue</p>
+                <p className="text-xs text-muted mt-1">Organise your catalogue into main categories and subcategories.</p>
             </div>
 
             <form onSubmit={submit} className="border p-6 space-y-5 max-w-2xl"
@@ -88,19 +102,27 @@ export default function Categories() {
                         <input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })}
                                className="input-field" placeholder="auto" />
                     </div>
+
                     <div className="md:col-span-2">
                         <label className="label-field">Parent Category (Leave blank for Main Category)</label>
                         <select
-                            value={form.parentId || ''}
-                            onChange={e => setForm({ ...form, parentId: e.target.value || null })}
+                            value={form.parentId}
+                            onChange={e => setForm({ ...form, parentId: e.target.value })}
                             className="input-field"
+                            disabled={hasSubcategories} // Prevent making a main category into a subcategory if it has children
                         >
                             <option value="">— None (Main Category) —</option>
-                            {categories.filter(c => !c.parentId && c.id !== editingId).map(c => (
+                            {categories.map(c => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
+                        {hasSubcategories && (
+                            <p className="text-[10px] text-amber-500 mt-1">
+                                This category has subcategories and cannot be moved.
+                            </p>
+                        )}
                     </div>
+
                     <div className="md:col-span-2">
                         <label className="label-field">Description</label>
                         <textarea rows="2" value={form.description}
@@ -127,6 +149,7 @@ export default function Categories() {
                 </div>
             </form>
 
+            {/* LIST (Nested) */}
             <div className="border overflow-x-auto" style={{ ...surfaceBg, ...borderColor }}>
                 <table className="w-full text-sm min-w-[600px]">
                     <thead>
@@ -139,21 +162,49 @@ export default function Categories() {
                     </thead>
                     <tbody>
                     {categories.map(c => (
-                        <tr key={c.id} className="border-b last:border-0" style={borderColor}>
-                            <td className="px-5 py-4">
-                                <div className="w-14 h-10 bg-sand overflow-hidden">
-                                    {c.imageUrl && <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />}
-                                </div>
-                            </td>
-                            <td className="px-5 py-4 text-fg">{c.name}</td>
-                            <td className="px-5 py-4 text-muted font-mono text-xs">{c.slug}</td>
-                            <td className="px-5 py-4 text-right whitespace-nowrap">
-                                <button onClick={() => edit(c)}
-                                        className="text-[10px] uppercase tracking-widest2 text-fg hover:underline mr-4">Edit</button>
-                                <button onClick={() => remove(c)}
-                                        className="text-[10px] uppercase tracking-widest2 text-red-600 hover:underline">Delete</button>
-                            </td>
-                        </tr>
+                        <Fragment key={c.id}>
+                            {/* Main Category Row */}
+                            <tr className="border-b last:border-0 bg-cbord/5" style={borderColor}>
+                                <td className="px-5 py-4">
+                                    <div className="w-14 h-10 bg-sand overflow-hidden">
+                                        {c.imageUrl && <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />}
+                                    </div>
+                                </td>
+                                <td className="px-5 py-4 text-fg font-medium">{c.name}</td>
+                                <td className="px-5 py-4 text-muted font-mono text-xs">{c.slug}</td>
+                                <td className="px-5 py-4 text-right whitespace-nowrap flex justify-end items-center gap-4">
+                                    <div className="flex border border-c">
+                                        <button onClick={() => move(c, -1)} className="w-6 h-6 border-r border-c hover:bg-cbord/20 flex items-center justify-center text-xs text-fg">↑</button>
+                                        <button onClick={() => move(c, 1)} className="w-6 h-6 hover:bg-cbord/20 flex items-center justify-center text-xs text-fg">↓</button>
+                                    </div>
+                                    <button onClick={() => edit(c)} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">Edit</button>
+                                    <button onClick={() => remove(c)} className="text-[10px] uppercase tracking-widest2 text-red-600 hover:underline">Delete</button>
+                                </td>
+                            </tr>
+
+                            {/* Subcategory Rows */}
+                            {c.subcategories?.map(sub => (
+                                <tr key={sub.id} className="border-b last:border-0" style={borderColor}>
+                                    <td className="px-5 py-3 pl-12">
+                                        <div className="w-10 h-8 bg-sand overflow-hidden">
+                                            {sub.imageUrl && <img src={sub.imageUrl} alt="" className="w-full h-full object-cover" />}
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-3 text-muted text-sm pl-12">
+                                        <span className="text-[10px] mr-2">↳</span> {sub.name}
+                                    </td>
+                                    <td className="px-5 py-3 text-muted font-mono text-xs">{sub.slug}</td>
+                                    <td className="px-5 py-3 text-right whitespace-nowrap flex justify-end items-center gap-4">
+                                        <div className="flex border border-c">
+                                            <button onClick={() => move(sub, -1)} className="w-6 h-6 border-r border-c hover:bg-cbord/20 flex items-center justify-center text-xs text-fg">↑</button>
+                                            <button onClick={() => move(sub, 1)} className="w-6 h-6 hover:bg-cbord/20 flex items-center justify-center text-xs text-fg">↓</button>
+                                        </div>
+                                        <button onClick={() => edit(sub)} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">Edit</button>
+                                        <button onClick={() => remove(sub)} className="text-[10px] uppercase tracking-widest2 text-red-600 hover:underline">Delete</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </Fragment>
                     ))}
                     {categories.length === 0 && (
                         <tr><td colSpan="4" className="px-5 py-10 text-center text-xs text-muted">No categories</td></tr>

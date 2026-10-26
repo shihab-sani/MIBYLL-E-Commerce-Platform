@@ -29,6 +29,7 @@ import Profile from './pages/Profile'
 import AdminProfile from './pages/admin/AdminProfile'
 import SubAdmins from './pages/admin/SubAdmins'
 import AuditLog from './pages/admin/AuditLog'
+import Requests from './pages/admin/Requests'
 
 function ScrollToTop() {
     const { pathname } = useLocation()
@@ -37,6 +38,9 @@ function ScrollToTop() {
 }
 
 export default function App() {
+    const location = useLocation()
+    const isFeaturedPage = location.pathname.startsWith('/featured')
+
     return (
         <>
             <ScrollToTop />
@@ -51,6 +55,7 @@ export default function App() {
                     <Route path="categories" element={<Categories />} />
                     <Route path="orders" element={<Orders />} />
                     <Route path="customers" element={<Customers />} />
+                    <Route path="requests" element={<Requests />} />
                     <Route path="profile" element={<AdminProfile />} />
                     <Route path="sub-admins" element={<SubAdmins />} />
                     <Route path="audit" element={<AuditLog />} />
@@ -59,14 +64,14 @@ export default function App() {
 
                 {/* CUSTOMER — storefront layout with page transitions */}
                 <Route path="*" element={
-                                     <div className="min-h-screen flex flex-col">
-                                        <Navbar />
-                                        <main className="flex-1">
-                                            <AnimatedRoutes />
-                                        </main>
-                                        <Footer />
-                                    </div>
-                                } />
+                    <div className="min-h-screen flex flex-col">
+                        {!isFeaturedPage && <Navbar />}
+                        <main className="flex-1">
+                            <AnimatedRoutes />
+                        </main>
+                        {!isFeaturedPage && <Footer />}
+                    </div>
+                } />
             </Routes>
         </>
     )
@@ -83,21 +88,15 @@ function AnimatedRoutes() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/profile" element={
-                                            <ProtectedRoute><Profile /></ProtectedRoute>
-                                       } />
-                <Route path="/checkout" element={
-                                             <ProtectedRoute><Checkout /></ProtectedRoute>
-                                        } />
-                <Route path="/orders" element={
-                                           <ProtectedRoute><MyOrders /></ProtectedRoute>
-                                      } />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
                 <Route path="*" element={
-                                     <div className="py-40 text-center">
-                                        <h1 className="text-5xl font-serif mb-4 text-fg">404</h1>
-                                        <p className="text-sm text-muted">Page not found</p>
-                                    </div>
-                                } />
+                     <div className="py-40 text-center">
+                        <h1 className="text-5xl font-serif mb-4 text-fg">404</h1>
+                        <p className="text-sm text-muted">Page not found</p>
+                    </div>
+                } />
             </Routes>
         </div>
     )

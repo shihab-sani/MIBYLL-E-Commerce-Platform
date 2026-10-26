@@ -167,20 +167,36 @@ export default function Navbar() {
                                 <div className="w-6"></div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto py-6">
+                            <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
                                 <nav className="flex flex-col">
-                                    {categories.map(c => (
-                                        <button
-                                            key={c.id}
-                                            onClick={() => setActiveCategory(c)}
-                                            className="px-8 py-5 text-left text-sm uppercase tracking-widest2 border-b border-c flex justify-between items-center transition-all hover:bg-cbord/10 text-fg/80 hover:text-fg"
-                                        >
-                                            {c.name}
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M9 18l6-6-6-6" />
-                                            </svg>
-                                        </button>
-                                    ))}
+                                    {categories.map(c => {
+                                        // Check if this category has subcategories
+                                        const hasSubcategories = c.subcategories && c.subcategories.length > 0;
+
+                                        return (
+                                            <button
+                                                key={c.id}
+                                                onClick={() => {
+                                                    if (hasSubcategories) {
+                                                        setActiveCategory(c); // Opens sub-panel
+                                                    } else {
+                                                        setDrawerOpen(false); // Closes menu
+                                                        navigate(`/shop?category=${c.slug}`); // Directs to shop
+                                                    }
+                                                }}
+                                                className="px-8 py-5 text-left text-sm uppercase tracking-widest2 border-b border-c flex justify-between items-center transition-all hover:bg-cbord/10 text-fg/80 hover:text-fg"
+                                            >
+                                                {c.name}
+
+                                                {/* Only show the arrow if subcategories exist */}
+                                                {hasSubcategories && (
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M9 18l6-6-6-6" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </nav>
 
                                 {/* Account & Settings */}
@@ -240,7 +256,7 @@ export default function Navbar() {
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-8">
+                            <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
                                 <Link
                                     to={`/shop?category=${activeCategory?.slug}`}
                                     onClick={() => setDrawerOpen(false)}
@@ -253,9 +269,9 @@ export default function Navbar() {
                                     {(activeCategory?.subcategories || []).map(sub => (
                                         <Link
                                             key={sub.slug}
-                                            to={`/shop?category=${activeCategory.slug}&q=${sub.name}`}
+                                            to={`/shop?category=${sub.slug}`} // <-- FIXED: Only pass the category slug
                                             onClick={() => setDrawerOpen(false)}
-                                            className="group flex justify-between items-center py-4 border-b border-c hover:border-fg transition-colors"
+                                            className="group flex justify-between items-center py-4 pl-4 pr-2 border-b border-c hover:border-fg transition-colors"
                                         >
                                             <span className="text-xs uppercase tracking-widest2 text-fg">
                                                 {sub.name}

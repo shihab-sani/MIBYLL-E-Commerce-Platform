@@ -5,8 +5,8 @@ import ImageUploader from '../../components/ImageUploader'
 
 const empty = {
     title: '', subtitle: '', ctaText: '', ctaLink: '',
-    mediaUrl: '', mediaType: 'IMAGE', position: 'TOP',
-    linkedProductId: '', displayOrder: 0, active: true,
+    mediaList: [],
+    position: 'TOP', linkedProductId: '', displayOrder: 0, active: true,
 }
 
 export default function Banners() {
@@ -37,10 +37,6 @@ export default function Banners() {
     const reset = () => { setForm(empty); setEditingId(null); setCustomLinkMode(false) }
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-    /**
-     * Friendly options for the CTA Link dropdown.
-     * The `value` is the actual endpoint but only the `label` is shown.
-     */
     const linkOptions = useMemo(() => {
         const opts = [
             { group: 'Pages', items: [
@@ -80,13 +76,12 @@ export default function Banners() {
         set('linkedProductId', id)
         const p = products.find(x => String(x.id) === String(id))
         if (p) {
-            if (!form.mediaUrl && p.images?.[0]) {
-                setForm(f => ({ ...f, mediaUrl: p.images[0], mediaType: 'IMAGE' }))
+            if (form.mediaList.length === 0 && p.images?.[0]) {
+                setForm(f => ({ ...f, mediaList: [{ mediaUrl: p.images[0], mediaType: 'IMAGE' }] }))
             }
             if (!form.title) {
                 setForm(f => ({ ...f, title: p.name }))
             }
-            // Auto-set the link to the product page
             set('ctaLink', `/product/${p.slug}`)
             setCustomLinkMode(false)
         }
@@ -94,19 +89,18 @@ export default function Banners() {
 
     const submit = async (e) => {
         e.preventDefault()
-        if (!form.mediaUrl) { toast.error('Upload an image/video or pick a product'); return }
+        if (form.mediaList.length === 0) { toast.error('Upload at least one image/video'); return }
         setSaving(true)
         const payload = {
             title: form.title,
             subtitle: form.subtitle,
             ctaText: form.ctaText,
             ctaLink: form.ctaLink || null,
-            mediaUrl: form.mediaUrl,
-            mediaType: form.mediaType,
             position: form.position,
             linkedProductId: form.linkedProductId ? Number(form.linkedProductId) : null,
             displayOrder: Number(form.displayOrder),
             active: form.active,
+            mediaList: form.mediaList // <-- Passing the array
         }
         try {
             if (editingId) {
@@ -129,14 +123,12 @@ export default function Banners() {
             subtitle: b.subtitle || '',
             ctaText: b.ctaText || '',
             ctaLink: b.ctaLink || '',
-            mediaUrl: b.mediaUrl || '',
-            mediaType: b.mediaType || 'IMAGE',
+            mediaList: b.mediaList || [],
             position: b.position || 'TOP',
             linkedProductId: b.linkedProductId || '',
             displayOrder: b.displayOrder ?? 0,
             active: b.active,
         })
-        // If the saved link isn't one of the known options → custom mode
         setCustomLinkMode(!!b.ctaLink && !allKnownValues.includes(b.ctaLink))
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -165,12 +157,10 @@ export default function Banners() {
             <div>
                 <h1 className="text-3xl font-serif text-fg">Banners</h1>
                 <p className="text-xs text-muted mt-1">
-                    TOP banners appear as the homepage hero. BOTTOM banners appear as the
-                    editorial / review section below the featured products.
+                    TOP banners appear as the full-screen homepage hero. EDITORIAL banners stack one by one below it.
                 </p>
             </div>
 
-            {/* FORM */}
             <form onSubmit={submit} className="border p-6 space-y-5 max-w-3xl"
                   style={{ ...surfaceBg, ...borderColor }}>
                 <h2 className="text-[11px] uppercase tracking-widest2 text-fg">
@@ -181,7 +171,7 @@ export default function Banners() {
                 <div>
                     <label className="label-field">Position *</label>
                     <div className="flex gap-3">
-                        {['TOP', 'EDITORIAL', 'BOTTOM'].map(pos => (
+                        {['TOP', 'EDITORIAL'].map(pos => (
                             <button
                                 type="button"
                                 key={pos}
@@ -192,17 +182,10 @@ export default function Banners() {
                                     : 'text-fg hover:border-fg'}`}
                                 style={form.position === pos ? {} : borderColor}
                             >
-                                {pos === 'TOP'
-                                ? 'Top (Hero)'
-                                : pos === 'EDITORIAL'
-                                    ? 'Editorial (Homepage)'
-                                    : 'Bottom (Slider)'}
+                                {pos === 'TOP' ? 'Top (Hero)' : 'Editorial (Homepage)'}
                             </button>
                         ))}
                     </div>
-                    <p className="text-[10px] text-muted mt-2">
-                        Bottom is designed for customer review screenshots linked to products.
-                    </p>
                 </div>
 
                 {/* BASIC */}
@@ -212,9 +195,6 @@ export default function Banners() {
                         <textarea rows="2" value={form.title} onChange={e => set('title', e.target.value)}
                                   placeholder="The Art of&#10;Quiet Luxury"
                                   className="input-field resize-none" />
-                        <p className="text-[10px] text-muted mt-1">
-                            Use a line break to split. Leave empty for a plain image / review slide.
-                        </p>
                     </div>
 
                     <div>
@@ -241,9 +221,6 @@ export default function Banners() {
                             <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                     </select>
-                    <p className="text-[10px] text-muted mt-1">
-                        When set, clicking the entire banner takes the customer to this product's page.
-                    </p>
                 </div>
 
                 {/* CTA LINK DROPDOWN */}
@@ -281,44 +258,25 @@ export default function Banners() {
                             className="input-field mt-2 font-mono text-xs"
                         />
                     )}
-
-                    <p className="text-[10px] text-muted mt-1">
-                        Pick a friendly name — the underlying URL is stored automatically.
-                    </p>
                 </div>
 
-                {/* MEDIA */}
+                {/* MEDIA (FIXED: Only one uploader block is here now) */}
                 <div>
-                    <label className="label-field">Media (Image or Video)</label>
-                    {form.mediaUrl ? (
-                        <div className="relative aspect-[16/7] overflow-hidden border"
-                             style={borderColor}>
-                            {form.mediaType === 'VIDEO' ? (
-                                <video src={form.mediaUrl} controls className="w-full h-full object-cover" />
-                            ) : (
-                                <img src={form.mediaUrl} alt="" className="w-full h-full object-cover" />
-                            )}
-                            <button type="button"
-                                    onClick={() => setForm(f => ({ ...f, mediaUrl: '', mediaType: 'IMAGE' }))}
-                                    className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 hover:bg-black">
-                                Replace
-                            </button>
-                        </div>
-                    ) : (
-                        <ImageUploader
-                            value={[]}
-                            multiple={false}
-                            accept="image/*,video/*"
-                            label="Click or drop an image or video"
-                            hint="JPG / PNG / WEBP / MP4 / WEBM — single file"
-                            onChange={(urls) => {
-                                const url = urls[0]
-                                if (!url) return
+                    <label className="label-field">Media (Images & Videos) *</label>
+                    <ImageUploader
+                        value={form.mediaList.map(m => m.mediaUrl)}
+                        multiple={true}
+                        accept="image/*,video/*"
+                        label="Click or drop images/videos"
+                        hint="Add as many as you want"
+                        onChange={(urls) => {
+                            const newMedia = urls.map(url => {
                                 const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv|m4v)(\?|#|$)/i.test(url)
-                                setForm(f => ({ ...f, mediaUrl: url, mediaType: isVideo ? 'VIDEO' : 'IMAGE' }))
-                            }}
-                        />
-                    )}
+                                return { mediaUrl: url, mediaType: isVideo ? 'VIDEO' : 'IMAGE' }
+                            })
+                            setForm(f => ({ ...f, mediaList: newMedia }))
+                        }}
+                    />
                 </div>
 
                 {/* ORDER + ACTIVE */}
@@ -363,10 +321,10 @@ export default function Banners() {
                         <div key={b.id} className="border flex flex-wrap items-center gap-4 p-4"
                              style={{ ...surfaceBg, ...borderColor }}>
                             <div className="w-32 h-20 bg-sand overflow-hidden shrink-0">
-                                {b.mediaType === 'VIDEO' ? (
-                                    <video src={b.mediaUrl} muted className="w-full h-full object-cover" />
+                                {b.mediaList?.[0]?.mediaType === 'VIDEO' ? (
+                                    <video src={b.mediaList[0].mediaUrl} muted className="w-full h-full object-cover" />
                                 ) : (
-                                    b.mediaUrl && <img src={b.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                    b.mediaList?.[0] && <img src={b.mediaList[0].mediaUrl} alt="" className="w-full h-full object-cover" />
                                 )}
                             </div>
 
@@ -376,7 +334,7 @@ export default function Banners() {
                                         {b.title || '(no headline)'}
                                     </p>
                                     <span className={`text-[9px] uppercase tracking-widest2 px-2 py-0.5
-                    ${b.position === 'BOTTOM'
+                    ${b.position === 'EDITORIAL'
                                         ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
                                         : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'}`}>
                     {b.position || 'TOP'}
@@ -387,14 +345,13 @@ export default function Banners() {
                                         : 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'}`}>
                     {b.active ? 'Active' : 'Hidden'}
                   </span>
+                                    {b.mediaList?.length > 1 && (
+                                        <span className="text-[9px] uppercase tracking-widest2 text-muted border border-c px-2 py-0.5">
+                          {b.mediaList.length} Media Files
+                      </span>
+                                    )}
                                 </div>
                                 {b.subtitle && <p className="text-[11px] text-muted mt-1">{b.subtitle}</p>}
-                                {b.ctaLink && <p className="text-[10px] text-muted font-mono">{b.ctaLink}</p>}
-                                {b.linkedProductSlug && (
-                                    <p className="text-[10px] text-muted">
-                                        Linked product: <span className="text-fg">{b.linkedProductSlug}</span>
-                                    </p>
-                                )}
                             </div>
 
                             <div className="flex items-center gap-1">

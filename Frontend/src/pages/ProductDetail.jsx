@@ -37,22 +37,21 @@ export default function ProductDetail() {
 
     useEffect(() => {
         setLoading(true)
-        api.get('/site/footer').then(r => {
-            if (r.data.shippingPolicyContent) setShippingPolicy(r.data.shippingPolicyContent)
-        }).catch(() => {})
-
         api.get(`/products/${slug}`)
             .then(r => {
                 setProduct(r.data)
                 setActiveImage(0)
                 setSize('')
                 setSelectedVariant(null)
+
                 api.get(`/products/${slug}/related`)
                     .then(res => setRelated(res.data))
                     .catch(() => {})
             })
             .catch(() => setProduct(null))
             .finally(() => setLoading(false))
+
+        return () => document.body.classList.remove('hide-navbar')
     }, [slug])
 
     // Update image when a variant is selected

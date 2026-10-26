@@ -10,6 +10,7 @@ const nav = [
     { to: '/admin/categories', label: 'Categories' },
     { to: '/admin/orders', label: 'Orders' },
     { to: '/admin/customers', label: 'Customers' },
+    { to: '/admin/requests', label: 'Requests' },
     { to: '/admin/footer', label: 'Footer' },
     { to: '/admin/profile', label: 'My Account' },
     { to: '/admin/sub-admins', label: 'Sub-Admins', adminOnly: true },
