@@ -23,7 +23,7 @@ public class CategoryService {
     private final FileStorageService fileStorageService;
 
     public List<CategoryDto> getAll() {
-        return categoryRepository.findAll().stream()
+        return categoryRepository.findAllByOrderByDisplayOrderAsc().stream()
                 .filter(c -> c.getParent() == null)
                 .map(this::toDto)
                 .toList();
@@ -40,10 +40,22 @@ public class CategoryService {
             throw ApiException.badRequest("Category name already exists");
         }
 
-        Categories parent = null;
+        Categories parent;
         if (req.parentId() != null) {
             parent = categoryRepository.findById(req.parentId()).orElse(null);
+        } else {
+            parent = null;
         }
+
+        // Calculate next displayOrder
+        Integer maxOrder = categoryRepository.findAll().stream()
+                .filter(c -> {
+                    if (parent == null) return c.getParent() == null;
+                    return c.getParent() != null && c.getParent().getId().equals(parent.getId());
+                })
+                .map(Categories::getDisplayOrder)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compare).orElse(-1);
 
         Categories c = Categories.builder()
                 .name(req.name())
@@ -51,6 +63,7 @@ public class CategoryService {
                 .description(req.description())
                 .imageUrl(req.imageUrl())
                 .parent(parent)
+                .displayOrder(maxOrder + 1) // Assign next position
                 .build();
         return toDto(categoryRepository.save(c));
     }
@@ -89,6 +102,57 @@ public class CategoryService {
             }
         }
         return saved;
+    }
+
+    @Transactional
+    public void move(UUID id, int direction) {
+        Categories current = categoryRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Category not found"));
+
+        List<Categories> siblings;
+        if (current.getParent() == null) {
+            siblings = categoryRepository.findAllByOrderByDisplayOrderAsc().stream()
+                    .filter(c -> c.getParent() == null).toList();
+        } else {
+            siblings = categoryRepository.findAllByOrderByDisplayOrderAsc().stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(current.getParent().getId())).toList();
+        }
+
+        // Sort by displayOrder, then by name just in case
+        siblings = new java.util.ArrayList<>(siblings);
+        siblings.sort(java.util.Comparator.comparing(Categories::getDisplayOrder, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(Categories::getName));
+
+        int currentIndex = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).getId().equals(id)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex == -1) return;
+
+        int targetIndex = currentIndex + direction;
+        if (targetIndex < 0 || targetIndex >= siblings.size()) return;
+
+        Categories target = siblings.get(targetIndex);
+
+        // Handle nulls safely
+        Integer currentOrder = current.getDisplayOrder() != null ? current.getDisplayOrder() : currentIndex;
+        Integer targetOrder = target.getDisplayOrder() != null ? target.getDisplayOrder() : targetIndex;
+
+        // Swap orders. If they are the same (legacy data), force a swap based on index.
+        if (currentOrder.equals(targetOrder)) {
+            current.setDisplayOrder(targetIndex);
+            target.setDisplayOrder(currentIndex);
+        } else {
+            current.setDisplayOrder(targetOrder);
+            target.setDisplayOrder(currentOrder);
+        }
+
+        categoryRepository.save(current);
+        categoryRepository.save(target);
     }
 
     @Transactional

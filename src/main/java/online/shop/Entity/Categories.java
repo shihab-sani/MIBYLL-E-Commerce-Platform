@@ -34,7 +34,11 @@ public class Categories {
     private Categories parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @OrderBy("name ASC")
+    @OrderBy("displayOrder ASC")
     @Builder.Default
     private List<Categories> subcategories = new ArrayList<>();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer displayOrder = 0;
 }
