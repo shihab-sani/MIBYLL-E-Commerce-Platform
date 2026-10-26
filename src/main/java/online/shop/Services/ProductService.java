@@ -37,8 +37,7 @@ public class ProductService {
     /* ------------ PUBLIC READ ------------ */
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> search(String categorySlug, String q, BigDecimal minPrice,
-                                   BigDecimal maxPrice, int page, int size, String sort) {
+    public Page<ProductDto> search(String categorySlug, String q, int page, int size, String sort) {
 
         Sort sorting = switch (sort == null ? "" : sort) {
             case "price_asc"  -> Sort.by(Sort.Direction.ASC, "price");
@@ -51,7 +50,7 @@ public class ProductService {
         String cat = (categorySlug == null || categorySlug.isBlank()) ? null : categorySlug;
         String query = (q == null || q.isBlank()) ? null : q.trim();
 
-        return productRepository.search(cat, query, minPrice, maxPrice, pageable).map(this::toDto);
+        return productRepository.search(cat, query, pageable).map(this::toDto);
     }
 
     @Transactional(readOnly = true)
@@ -60,18 +59,6 @@ public class ProductService {
                 .orElseThrow(() -> ApiException.notFound("Product not found"));
         if (!p.isActive()) throw ApiException.notFound("Product not available");
         return toDto(p);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProductDto> getFeatured(int limit) {
-        return productRepository.findByFeaturedTrueAndActiveTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
-                .stream().map(this::toDto).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProductDto> getNewArrivals(int limit) {
-        return productRepository.findByNewArrivalTrueAndActiveTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
-                .stream().map(this::toDto).toList();
     }
 
     /* ------------ ADMIN CRUD ------------ */
@@ -102,8 +89,6 @@ public class ProductService {
                 .discountPercent(req.discountPercent() == null ? 0 : req.discountPercent())
                 .stockQuantity(req.stockQuantity())
                 .brand(req.brand())
-                .featured(req.featured())
-                .newArrival(req.newArrival())
                 .active(req.active() == null || req.active())
                 .build();
 
@@ -142,8 +127,6 @@ public class ProductService {
         p.setDiscountPercent(req.discountPercent() == null ? 0 : req.discountPercent());
         p.setStockQuantity(req.stockQuantity());
         p.setBrand(req.brand());
-        p.setFeatured(req.featured());
-        p.setNewArrival(req.newArrival());
         if (req.active() != null) p.setActive(req.active());
 
         p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
@@ -265,8 +248,7 @@ public class ProductService {
         return new ProductDto(
                 p.getId(), p.getName(), p.getSlug(), p.getDescription(),
                 p.getPrice(), p.getDiscountPercent(), p.getFinalPrice(),
-                p.getStockQuantity(), p.getBrand(),
-                p.isFeatured(), p.isNewArrival(), p.isActive(),
+                p.getStockQuantity(), p.getBrand(), p.isActive(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
                 images, p.getCreatedAt(), p.getSizeType(), variants

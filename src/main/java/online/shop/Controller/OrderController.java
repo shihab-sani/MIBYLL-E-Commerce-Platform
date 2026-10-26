@@ -3,9 +3,9 @@ package online.shop.Controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.OrderDtos.*;
-import online.shop.Entity.User;
-import online.shop.Services.AuthService;
+import online.shop.DTOs.RequestDtos.*;
 import online.shop.Services.OrderService;
+import online.shop.Services.RequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;
+    private final RequestService requestService;
 
     @PostMapping
     public ResponseEntity<OrderDto> place(@AuthenticationPrincipal UserDetails ud,
@@ -46,5 +47,16 @@ public class OrderController {
     @PatchMapping("/{id}/cancel-refund")
     public ResponseEntity<OrderDto> cancelRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
         return ResponseEntity.ok(orderService.cancelRefundRequest(ud.getUsername(), id));
+    }
+
+    @PostMapping("/requests")
+    public ResponseEntity<Void> createRequest(@AuthenticationPrincipal UserDetails ud, @RequestBody CreateRequestDto req) {
+        requestService.createRequest(ud.getUsername(), req);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/requests")
+    public ResponseEntity<List<RequestDto>> myRequests(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(requestService.getMyRequests(ud.getUsername()));
     }
 }

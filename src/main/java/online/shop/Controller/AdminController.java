@@ -8,6 +8,7 @@ import online.shop.DTOs.DashboardDto.*;
 import online.shop.DTOs.BannerDtos.*;
 import online.shop.DTOs.OrderDtos.*;
 import online.shop.DTOs.ProductDtos.*;
+import online.shop.DTOs.RequestDtos.*;
 import online.shop.Entity.SiteSettings;
 import online.shop.Services.*;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class AdminController {
     private final BannerService bannerService;
     private final AuditService auditService;
     private final SiteSettingsService siteSettingsService;
+    private final RequestService requestService;
 
     /* ---------------- DASHBOARD ---------------- */
 
@@ -137,6 +139,15 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/categories/{id}/move")
+    public ResponseEntity<Void> moveCategory(@AuthenticationPrincipal UserDetails ud,
+                                             @PathVariable UUID id,
+                                             @RequestParam int direction) {
+        categoryService.move(id, direction);
+        auditService.log(ud.getUsername(), roleOf(ud), "CATEGORY_MOVED", "CATEGORY", String.valueOf(id), "direction=" + direction);
+        return ResponseEntity.ok().build();
+    }
+
     /* ============================================================
        ORDERS
        ============================================================ */
@@ -155,6 +166,25 @@ public class AdminController {
         OrderDto updated = orderService.updateStatus(id, req.status());
         auditService.log(ud.getUsername(), roleOf(ud), "ORDER_STATUS_CHANGED", "ORDER",
                 String.valueOf(id), "Status → " + req.status());
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/orders/{id}/approve-refund")
+    public ResponseEntity<OrderDto> approveRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
+        OrderDto updated = orderService.approveRefund(id);
+        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_APPROVED", "ORDER", String.valueOf(id), null);
+        return ResponseEntity.ok(updated);
+    }
+
+    public record RejectionRequest(String reason) {}
+
+    @PatchMapping("/orders/{id}/reject-refund")
+    public ResponseEntity<OrderDto> rejectRefund(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable UUID id,
+            @RequestBody RejectionRequest req) {
+        OrderDto updated = orderService.rejectRefund(id, req.reason());
+        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_REJECTED", "ORDER", String.valueOf(id), null);
         return ResponseEntity.ok(updated);
     }
 
@@ -214,14 +244,14 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getCustomers());
     }
 
-    /* ---------------- helper ---------------- */
-
-    private String roleOf(UserDetails ud) {
-        return ud.getAuthorities().stream()
-                .findFirst()
-                .map(GrantedAuthority::getAuthority)
-                .orElse("ROLE_SUBADMIN");
+    @GetMapping("/requests")
+    public ResponseEntity<List<RequestDto>> allRequests() {
+        return ResponseEntity.ok(requestService.getAllRequests());
     }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
 
     @GetMapping("/site/footer")
     public ResponseEntity<SiteSettings> getFooter() {
@@ -236,22 +266,12 @@ public class AdminController {
         return ResponseEntity.ok(updated);
     }
 
-    @PatchMapping("/orders/{id}/approve-refund")
-    public ResponseEntity<OrderDto> approveRefund(@AuthenticationPrincipal UserDetails ud, @PathVariable UUID id) {
-        OrderDto updated = orderService.approveRefund(id);
-        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_APPROVED", "ORDER", String.valueOf(id), null);
-        return ResponseEntity.ok(updated);
-    }
+    /* ---------------- helper ---------------- */
 
-    public record RejectionRequest(String reason) {}
-
-    @PatchMapping("/orders/{id}/reject-refund")
-    public ResponseEntity<OrderDto> rejectRefund(
-            @AuthenticationPrincipal UserDetails ud,
-            @PathVariable UUID id,
-            @RequestBody RejectionRequest req) {
-        OrderDto updated = orderService.rejectRefund(id, req.reason());
-        auditService.log(ud.getUsername(), roleOf(ud), "REFUND_REJECTED", "ORDER", String.valueOf(id), null);
-        return ResponseEntity.ok(updated);
+    private String roleOf(UserDetails ud) {
+        return ud.getAuthorities().stream()
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                .orElse("ROLE_SUBADMIN");
     }
 }

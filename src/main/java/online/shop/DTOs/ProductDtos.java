@@ -11,8 +11,7 @@ public class ProductDtos {
     public record ProductDto(
             UUID id, String name, String slug, String description,
             BigDecimal price, Integer discountPercent, BigDecimal finalPrice,
-            Integer stockQuantity, String brand,
-            boolean featured, boolean newArrival, boolean active,
+            Integer stockQuantity, String brand, boolean active,
             UUID categoryId, String categoryName, List<String> images, LocalDateTime createdAt,
             String sizeType, List<VariantDto> variants
     ) {}
@@ -25,8 +24,6 @@ public class ProductDtos {
             @Min(0) @Max(90) Integer discountPercent,
             @NotNull @Min(0) Integer stockQuantity,
             String brand,
-            boolean featured,
-            boolean newArrival,
             Boolean active,
             UUID categoryId,
             List<String> images,

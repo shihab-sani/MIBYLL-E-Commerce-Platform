@@ -47,14 +47,6 @@ public class Product {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean featured = false;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean newArrival = false;
-
-    @Column(nullable = false)
-    @Builder.Default
     private boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
