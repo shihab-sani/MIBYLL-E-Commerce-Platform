@@ -27,14 +27,11 @@ public class Banner {
     private String ctaText;
     private String ctaLink;
 
-    @Column(length = 1000)
-    private String mediaUrl;
-
-    /** "IMAGE" | "VIDEO" */
+    @OneToMany(mappedBy = "banner", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
     @Builder.Default
-    private String mediaType = "IMAGE";
+    private java.util.List<BannerMedia> mediaList = new java.util.ArrayList<>();
 
-    /** "TOP" | "BOTTOM" */
     @Column(length = 20)
     @Builder.Default
     private String position = "TOP";

@@ -3,6 +3,7 @@ package online.shop.Services;
 import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.BannerDtos.*;
 import online.shop.Entity.Banner;
+import online.shop.Entity.BannerMedia;
 import online.shop.Entity.Product;
 import online.shop.ExceptionsHandler.ApiException;
 import online.shop.Repositories.BannerRepository;
@@ -45,13 +46,13 @@ public class BannerService {
                 .subtitle(req.subtitle())
                 .ctaText(req.ctaText())
                 .ctaLink(req.ctaLink())
-                .mediaUrl(req.mediaUrl())
-                .mediaType(req.mediaType() == null ? "IMAGE" : req.mediaType())
                 .position(req.position() == null ? "TOP" : req.position().toUpperCase())
                 .linkedProductId(req.linkedProductId())
                 .displayOrder(req.displayOrder() == null ? 0 : req.displayOrder())
                 .active(req.active() == null || req.active())
                 .build();
+
+        attachMedia(b, req.mediaList());
         return toDto(bannerRepository.save(b));
     }
 
@@ -60,36 +61,19 @@ public class BannerService {
         Banner b = bannerRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Banner not found"));
 
-        String oldMediaUrl = b.getMediaUrl();
-        boolean mediaChanged = req.mediaUrl() != null && !req.mediaUrl().equals(oldMediaUrl);
-
         b.setTitle(req.title());
         b.setSubtitle(req.subtitle());
         b.setCtaText(req.ctaText());
         b.setCtaLink(req.ctaLink());
-        b.setMediaUrl(req.mediaUrl());
-        b.setMediaType(req.mediaType() == null ? "IMAGE" : req.mediaType());
         if (req.position() != null) b.setPosition(req.position().toUpperCase());
         b.setLinkedProductId(req.linkedProductId());
         if (req.displayOrder() != null) b.setDisplayOrder(req.displayOrder());
         if (req.active() != null) b.setActive(req.active());
 
-        Banner saved = bannerRepository.save(b);
+        b.getMediaList().clear();
+        attachMedia(b, req.mediaList());
 
-        // SAFE FILE DELETION ON UPDATE
-        if (mediaChanged && oldMediaUrl != null) {
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        fileStorageService.deleteFile(oldMediaUrl);
-                    }
-                });
-            } else {
-                fileStorageService.deleteFile(oldMediaUrl);
-            }
-        }
-        return toDto(saved);
+        return toDto(bannerRepository.save(b));
     }
 
     @Transactional
@@ -97,19 +81,23 @@ public class BannerService {
         Banner b = bannerRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Banner not found"));
 
-        String mediaUrl = b.getMediaUrl();
+        List<String> mediaUrls = b.getMediaList() == null ? List.of() : b.getMediaList().stream()
+                .map(BannerMedia::getMediaUrl)
+                .filter(mediaUrl -> mediaUrl != null && !mediaUrl.isBlank())
+                .toList();
+
         bannerRepository.delete(b);
 
-        if (mediaUrl != null) {
+        if (!mediaUrls.isEmpty()) {
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        fileStorageService.deleteFile(mediaUrl);
+                        mediaUrls.forEach(fileStorageService::deleteFile);
                     }
                 });
             } else {
-                fileStorageService.deleteFile(mediaUrl);
+                mediaUrls.forEach(fileStorageService::deleteFile);
             }
         }
     }
@@ -125,6 +113,20 @@ public class BannerService {
         return toDto(bannerRepository.save(b));
     }
 
+    private void attachMedia(Banner b, java.util.List<BannerMediaRequest> mediaList) {
+        if (mediaList == null) return;
+        int order = 0;
+        for (BannerMediaRequest m : mediaList) {
+            if (m.mediaUrl() == null || m.mediaUrl().isBlank()) continue;
+            b.getMediaList().add(BannerMedia.builder()
+                    .banner(b)
+                    .mediaUrl(m.mediaUrl())
+                    .mediaType(m.mediaType() == null ? "IMAGE" : m.mediaType())
+                    .displayOrder(order++)
+                    .build());
+        }
+    }
+
     public BannerDto toDto(Banner b) {
         String slug = null;
         if (b.getLinkedProductId() != null) {
@@ -132,20 +134,14 @@ public class BannerService {
                     .map(Product::getSlug).orElse(null);
         }
 
+        java.util.List<BannerMediaDto> mediaDtos = b.getMediaList().stream()
+                .map(m -> new BannerMediaDto(m.getId(), m.getMediaUrl(), m.getMediaType(), m.getDisplayOrder()))
+                .toList();
+
         return new BannerDto(
-                b.getId(),
-                b.getTitle(),
-                b.getSubtitle(),
-                b.getCtaText(),
-                b.getCtaLink(),
-                b.getMediaUrl(),
-                b.getMediaType(),
-                b.getPosition() == null ? "TOP" : b.getPosition(),
-                b.getLinkedProductId(),
-                slug,
-                b.getDisplayOrder(),
-                b.isActive(),
-                b.getCreatedAt()
+                b.getId(), b.getTitle(), b.getSubtitle(), b.getCtaText(), b.getCtaLink(),
+                b.getPosition() == null ? "TOP" : b.getPosition(), b.getLinkedProductId(), slug,
+                b.getDisplayOrder(), b.isActive(), b.getCreatedAt(), mediaDtos
         );
     }
 }
