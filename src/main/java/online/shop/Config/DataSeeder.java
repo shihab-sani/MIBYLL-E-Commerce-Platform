@@ -60,28 +60,29 @@ public class DataSeeder implements CommandLineRunner {
 
         /* ---------- CATEGORIES ---------- */
         if (categoryRepository.count() == 0) {
-            // 1. Main Categories
-            Categories women = categoryRepository.save(Categories.builder().name("Women").slug("women").displayOrder(0).imageUrl("...").build());
-            Categories men = categoryRepository.save(Categories.builder().name("Men").slug("men").displayOrder(1).imageUrl("...").build());
-            Categories accessories = categoryRepository.save(Categories.builder().name("Accessories").slug("accessories").displayOrder(2).imageUrl("...").build());
-            Categories footwear = categoryRepository.save(Categories.builder().name("Footwear").slug("footwear").displayOrder(3).imageUrl("...").build());
-            // 2. Subcategories
+            // 1. Main Categories with real images and display order
+            Categories women = categoryRepository.save(Categories.builder().name("Women").slug("women").displayOrder(0).imageUrl("https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200").build());
+            Categories men = categoryRepository.save(Categories.builder().name("Men").slug("men").displayOrder(1).imageUrl("https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1200").build());
+            Categories accessories = categoryRepository.save(Categories.builder().name("Accessories").slug("accessories").displayOrder(2).imageUrl("https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=1200").build());
+            Categories footwear = categoryRepository.save(Categories.builder().name("Footwear").slug("footwear").displayOrder(3).imageUrl("https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200").build());
+
+            // 2. Subcategories with display order
             categoryRepository.saveAll(List.of(
-                    Categories.builder().name("Dresses").slug("dresses").parent(women).build(),
-                    Categories.builder().name("Tops").slug("tops").parent(women).build(),
-                    Categories.builder().name("Knitwear").slug("knitwear").parent(women).build(),
+                    Categories.builder().name("Dresses").slug("dresses").parent(women).displayOrder(0).build(),
+                    Categories.builder().name("Tops").slug("tops").parent(women).displayOrder(1).build(),
+                    Categories.builder().name("Knitwear").slug("knitwear").parent(women).displayOrder(2).build(),
 
-                    Categories.builder().name("Shirts").slug("shirts").parent(men).build(),
-                    Categories.builder().name("Trousers").slug("trousers").parent(men).build(),
-                    Categories.builder().name("Suits").slug("suits").parent(men).build(),
+                    Categories.builder().name("Shirts").slug("shirts").parent(men).displayOrder(0).build(),
+                    Categories.builder().name("Trousers").slug("trousers").parent(men).displayOrder(1).build(),
+                    Categories.builder().name("Suits").slug("suits").parent(men).displayOrder(2).build(),
 
-                    Categories.builder().name("Jewelry").slug("jewelry").parent(accessories).build(),
-                    Categories.builder().name("Watches").slug("watches").parent(accessories).build(),
-                    Categories.builder().name("Bags").slug("bags").parent(accessories).build(),
+                    Categories.builder().name("Jewelry").slug("jewelry").parent(accessories).displayOrder(0).build(),
+                    Categories.builder().name("Watches").slug("watches").parent(accessories).displayOrder(1).build(),
+                    Categories.builder().name("Bags").slug("bags").parent(accessories).displayOrder(2).build(),
 
-                    Categories.builder().name("Boots").slug("boots").parent(footwear).build(),
-                    Categories.builder().name("Sneakers").slug("sneakers").parent(footwear).build(),
-                    Categories.builder().name("Heels").slug("heels").parent(footwear).build()
+                    Categories.builder().name("Boots").slug("boots").parent(footwear).displayOrder(0).build(),
+                    Categories.builder().name("Sneakers").slug("sneakers").parent(footwear).displayOrder(1).build(),
+                    Categories.builder().name("Heels").slug("heels").parent(footwear).displayOrder(2).build()
             ));
             System.out.println(">> Seeded main & sub categories.");
         }
@@ -141,10 +142,6 @@ public class DataSeeder implements CommandLineRunner {
 
         /* =================================================================
            BANNERS
-           -----------------------------------------------------------------
-           1) MIGRATION runs on EVERY startup (unconditional).
-           2) TOP seeding only when no TOP banner exists.
-           3) BOTTOM seeding only when no BOTTOM banner exists.
            ================================================================= */
 
         /* ---------- 1. MIGRATION: NULL / blank position → TOP ---------- */
@@ -160,7 +157,20 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println(">> Migrated " + migrated + " legacy banner(s) to position=TOP");
         }
 
-        /* ---------- 2. SEED TOP ---------- */
+        /* ---------- 2. SEED TOP (HERO) BANNER ---------- */
+        if (bannerRepository.countByPosition("TOP") == 0) {
+            bannerService.create(new BannerRequest(
+                    "The Art of\nQuiet Luxury",
+                    "Autumn / Winter Collection",
+                    "EXPLORE THE COLLECTION",
+                    "/shop",
+                    "TOP", null, 0, true,
+                    List.of(new BannerMediaRequest("https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=2000", "IMAGE"))
+            ));
+            System.out.println(">> Seeded 1 TOP banner.");
+        }
+
+        /* ---------- 3. SEED EDITORIAL BANNERS ---------- */
         if (bannerRepository.countByPosition("EDITORIAL") == 0) {
             bannerService.create(new BannerRequest(
                     "Crafted Slowly",
@@ -183,7 +193,7 @@ public class DataSeeder implements CommandLineRunner {
                     "Quality Materials",
                     "EXPLORE",
                     "/shop",
-                    "EDITORIAL", null, 1, true,
+                    "EDITORIAL", null, 2, true,
                     List.of(new BannerMediaRequest("https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200", "IMAGE"))
             ));
             System.out.println(">> Seeded 3 EDITORIAL banners.");
@@ -193,9 +203,19 @@ public class DataSeeder implements CommandLineRunner {
     private void seed(String name, BigDecimal price, int discount, int stock, String brand,
                       UUID categoryId, String description, List<String> images) {
         productService.create(new ProductDtos.ProductRequest(
-                name, null, description, price, discount, stock, brand,
-                true, // active
-                categoryId, images, "CLOTHING", java.util.List.of()
+                name,
+                null,
+                description,
+                price,
+                discount,
+                stock,
+                brand,
+                true,       // active
+                categoryId,
+                images,
+                "CLOTHING",
+                List.of(),
+                false       // <-- FIXED: added the missing 'featured' boolean
         ));
     }
 }
