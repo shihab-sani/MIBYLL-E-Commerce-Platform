@@ -3,6 +3,9 @@ import { useLocalization } from '../context/LocalizationContext'
 
 export default function ProductCard({ product }) {
     const { formatPrice, t } = useLocalization()
+
+    if (product.featured) return null;
+
     const hasDiscount = product.discountPercent > 0
     const hoverImage = product.images?.[1] || product.images?.[0]
 

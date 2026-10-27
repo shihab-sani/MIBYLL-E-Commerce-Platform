@@ -7,6 +7,7 @@ const nav = [
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/banners', label: 'Banners' },
     { to: '/admin/products', label: 'Products' },
+    { to: '/admin/featured-products', label: 'Featured Products' },
     { to: '/admin/categories', label: 'Categories' },
     { to: '/admin/orders', label: 'Orders' },
     { to: '/admin/customers', label: 'Customers' },

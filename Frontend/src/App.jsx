@@ -14,18 +14,18 @@ import Checkout from './pages/Checkout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import MyOrders from './pages/MyOrders'
+import Profile from './pages/Profile'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
 import Banners from './pages/admin/Banners'
 import Products from './pages/admin/Products'
+import FeaturedProducts from './pages/admin/FeaturedProducts'
 import ProductForm from './pages/admin/ProductForm'
 import Categories from './pages/admin/Categories'
 import Orders from './pages/admin/Orders'
 import Customers from './pages/admin/Customers'
 import FooterEditor from './pages/admin/FooterEditor'
-
-import Profile from './pages/Profile'
 import AdminProfile from './pages/admin/AdminProfile'
 import SubAdmins from './pages/admin/SubAdmins'
 import AuditLog from './pages/admin/AuditLog'
@@ -38,9 +38,6 @@ function ScrollToTop() {
 }
 
 export default function App() {
-    const location = useLocation()
-    const isFeaturedPage = location.pathname.startsWith('/featured')
-
     return (
         <>
             <ScrollToTop />
@@ -50,6 +47,7 @@ export default function App() {
                     <Route index element={<Dashboard />} />
                     <Route path="banners" element={<Banners />} />
                     <Route path="products" element={<Products />} />
+                    <Route path="featured-products" element={<FeaturedProducts />} />
                     <Route path="products/new" element={<ProductForm />} />
                     <Route path="products/:id/edit" element={<ProductForm />} />
                     <Route path="categories" element={<Categories />} />
@@ -62,14 +60,14 @@ export default function App() {
                     <Route path="footer" element={<FooterEditor />} />
                 </Route>
 
-                {/* CUSTOMER — storefront layout with page transitions */}
+                {/* CUSTOMER — standard layout (Navbar is always visible) */}
                 <Route path="*" element={
-                    <div className="min-h-screen flex flex-col">
-                        {!isFeaturedPage && <Navbar />}
+                     <div className="min-h-screen flex flex-col">
+                        <Navbar />
                         <main className="flex-1">
                             <AnimatedRoutes />
                         </main>
-                        {!isFeaturedPage && <Footer />}
+                        <Footer />
                     </div>
                 } />
             </Routes>

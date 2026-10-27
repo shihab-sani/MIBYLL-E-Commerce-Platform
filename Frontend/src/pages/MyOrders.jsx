@@ -20,6 +20,7 @@ const TABS = [
     { key: 'ONGOING',   label: 'Ongoing' },
     { key: 'DELIVERED', label: 'Delivered' },
     { key: 'CANCELLED', label: 'Cancelled' },
+    { key: 'INQUIRIES', label: 'My Inquiries' }, // <-- NEW TAB
 ]
 
 export default function MyOrders() {
@@ -29,8 +30,12 @@ export default function MyOrders() {
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState('ALL')
 
+    // Inquiries State
+    const [inquiries, setInquiries] = useState([])
+    const [loadingInquiries, setLoadingInquiries] = useState(true)
+
     // Refund Modal State
-    const [refundModal, setRefundModal] = useState(null) // { orderId: id }
+    const [refundModal, setRefundModal] = useState(null)
     const [refundReason, setRefundReason] = useState('')
     const [submittingRefund, setSubmittingRefund] = useState(false)
 
@@ -42,7 +47,15 @@ export default function MyOrders() {
             .finally(() => setLoading(false))
     }
 
-    useEffect(() => { load() }, [])
+    useEffect(() => {
+        load()
+
+        // Fetch User Inquiries (Adjust the URL if your endpoint is different)
+        api.get('/orders/requests')
+            .then(r => setInquiries(r.data))
+            .catch(() => {})
+            .finally(() => setLoadingInquiries(false))
+    }, [])
 
     const handleCancel = async (orderId) => {
         if (!confirm('Are you sure you want to cancel this order?')) return
@@ -82,14 +95,13 @@ export default function MyOrders() {
     }
 
     const filtered = orders.filter(o => {
-        if (tab === 'ALL' || tab === 'CART') return true
+        if (tab === 'ALL' || tab === 'CART' || tab === 'INQUIRIES') return true
         if (tab === 'ONGOING')   return ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status)
         if (tab === 'DELIVERED') return o.status === 'DELIVERED'
         if (tab === 'CANCELLED') return o.status === 'CANCELLED'
         return true
     })
 
-    // Check if 2 days passed since delivery
     const isRefundExpired = (deliveredAt) => {
         if (!deliveredAt) return false;
         const days = (new Date() - new Date(deliveredAt)) / (1000 * 60 * 60 * 24);
@@ -111,7 +123,61 @@ export default function MyOrders() {
                 ))}
             </div>
 
-            {/* CART TAB */}
+            {/* --- MY INQUIRIES TAB --- */}
+            {tab === 'INQUIRIES' && (
+                loadingInquiries ? (
+                    <div className="py-20 text-center text-sm text-muted">Loading inquiries…</div>
+                ) : inquiries.length === 0 ? (
+                    <div className="py-24 text-center">
+                        <p className="text-sm text-muted mb-8">You haven't sent any inquiries yet.</p>
+                        <Link to="/shop" className="btn-primary">Browse Products</Link>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {inquiries.map((inquiry) => (
+                            <div key={inquiry.id} className="card p-6 flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-4">
+                                    {inquiry.productImage && (
+                                        <img
+                                            src={inquiry.productImage}
+                                            alt={inquiry.productName}
+                                            className="w-16 h-20 object-cover bg-sand mt-1"
+                                        />
+                                    )}
+                                    <div>
+                                        <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
+                                        <p className="text-xs text-muted mt-1 italic max-w-md">"{inquiry.message}"</p>
+
+                                        {inquiry.adminReply && (
+                                            <div className="mt-4 p-3 border-l-2 border-[#C5A880] bg-[#C5A880]/5">
+                                                <p className="text-[10px] uppercase tracking-widest2 text-[#C5A880] mb-1">
+                                                    Admin Reply
+                                                </p>
+                                                <p className="text-xs text-fg">{inquiry.adminReply}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="text-left md:text-right shrink-0">
+                                    <span className={`inline-block text-[9px] uppercase tracking-widest2 px-3 py-1 border ${
+                                        inquiry.status === 'PENDING' ? 'border-amber-500 text-amber-500' :
+                                            inquiry.status === 'REPLIED' ? 'border-green-500 text-green-500' :
+                                                'border-gray-500 text-gray-400'
+                                    }`}>
+                                        {inquiry.status || 'Pending'}
+                                    </span>
+                                    <p className="text-[10px] text-muted mt-2">
+                                        {new Date(inquiry.createdAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )
+            )}
+
+            {/* --- CART TAB --- */}
             {tab === 'CART' && (
                 cart?.items?.length === 0 ? (
                     <div className="py-20 text-center">
@@ -147,8 +213,8 @@ export default function MyOrders() {
                 )
             )}
 
-            {/* ORDERS TAB(S) */}
-            {tab !== 'CART' && (
+            {/* --- ORDERS TABS --- */}
+            {tab !== 'CART' && tab !== 'INQUIRIES' && (
                 loading ? (
                     <div className="py-20 text-center text-sm text-muted">Loading orders…</div>
                 ) : filtered.length === 0 ? (
@@ -213,9 +279,7 @@ export default function MyOrders() {
                                         <p className="mt-1"><span className="uppercase tracking-widest2 text-[10px]">Phone:</span> <span className="text-fg">{order.phone}</span></p>
                                     </div>
 
-                                    {/* ACTION BUTTONS */}
                                     <div className="flex flex-col items-end gap-2">
-                                        {/* Show rejection reason if rejected */}
                                         {order.refundRejected && !order.refundRequested && (
                                             <p className="text-xs text-red-400 text-right mb-2 max-w-xs">
                                                 <span className="font-bold uppercase tracking-widest text-[9px] block mb-1">Rejection Reason:</span>
@@ -265,7 +329,7 @@ export default function MyOrders() {
                                                                 log.action === 'REJECTED' ? 'text-red-500' :
                                                                     log.action === 'APPROVED' ? 'text-green-500' :
                                                                         log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
-                                                                }`}>
+                                                            }`}>
                                                                 [{log.action}]
                                                             </span>
                                                             <span className="text-fg">{log.reason}</span>

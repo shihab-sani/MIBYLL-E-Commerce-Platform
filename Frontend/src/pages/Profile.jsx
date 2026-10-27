@@ -170,29 +170,6 @@ export default function Profile() {
                 </button>
             </form>
 
-            <div className="card p-6 space-y-5 mt-8">
-                <h2 className="text-[11px] uppercase tracking-widest2 text-fg">My Inquiries</h2>
-                {requests.length === 0 ? (
-                    <p className="text-sm text-muted">You haven't sent any inquiries.</p>
-                ) : (
-                    <div className="space-y-4">
-                        {requests.map(r => (
-                            <div key={r.id} className="flex gap-4 border-b border-c pb-4 last:border-0">
-                                <div className="w-16 h-20 bg-sand shrink-0">
-                                    {r.productImage && <img src={r.productImage} className="w-full h-full object-cover" />}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-fg">{r.productName}</p>
-                                    <p className="text-xs text-muted mt-1">"{r.message}"</p>
-                                    <p className="text-[10px] text-muted mt-2 uppercase tracking-widest2">
-                                        Status: {r.status}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
         </div>
     )
 }

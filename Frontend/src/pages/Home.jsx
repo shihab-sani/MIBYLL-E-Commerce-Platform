@@ -8,27 +8,20 @@ function HeroSlider({ banners }) {
     const [bannerIndex, setBannerIndex] = useState(0)
     const [mediaIndex, setMediaIndex] = useState(0)
 
-    // Dynamic Auto-slide logic
     useEffect(() => {
         if (!banners || banners.length === 0) return
-
         const currentBanner = banners[bannerIndex]
         const mediaList = currentBanner.mediaList || []
         if (mediaList.length === 0) return
 
-        // Check if this is the last image of the current banner
         const isLastMedia = mediaIndex === mediaList.length - 1
-
-        // Wait 6 seconds if it's the last image, otherwise 3 seconds
         const delay = isLastMedia ? 6000 : 3000
 
         const timer = setTimeout(() => {
             if (isLastMedia) {
-                // Move to next banner and reset media
                 setMediaIndex(0)
                 setBannerIndex((prev) => (prev + 1) % banners.length)
             } else {
-                // Cycle to next image in the same banner
                 setMediaIndex((prev) => prev + 1)
             }
         }, delay)
@@ -42,7 +35,6 @@ function HeroSlider({ banners }) {
     const currentMediaList = currentBanner.mediaList || []
     const currentMedia = currentMediaList[mediaIndex] || currentMediaList[0] || {}
 
-    // Manual Navigation (Arrows)
     const nextSlide = () => {
         setBannerIndex((prev) => (prev + 1) % banners.length)
         setMediaIndex(0)
@@ -56,7 +48,7 @@ function HeroSlider({ banners }) {
     return (
         <section className="relative h-screen min-h-[600px] w-full bg-gray-100 overflow-hidden group">
 
-            {/* Background Media Layers (Cycles through the images of the CURRENT banner) */}
+            {/* Background Media Layers */}
             {currentMediaList.map((media, index) => (
                 <div
                     key={index}
@@ -83,7 +75,7 @@ function HeroSlider({ banners }) {
                 </div>
             ))}
 
-            {/* Navigation Arrows (Only show if there is more than 1 banner to slide between) */}
+            {/* Navigation Arrows */}
             {banners.length > 1 && (
                 <>
                     <button
@@ -105,26 +97,28 @@ function HeroSlider({ banners }) {
                 </>
             )}
 
-            {/* Text Container (Hover Reveal) */}
-            <div className="absolute inset-0 flex flex-col justify-end px-8 md:px-16 lg:px-24 pb-24
-                            opacity-0 group-hover:opacity-100 transition-all duration-700 transform translate-y-8 group-hover:translate-y-0 z-20 pointer-events-none">
+            {/* Text Container */}
+            <div className="w-full md:w-1/2 flex items-center justify-center p-12 md:p-24">
+                <div className="max-w-md text-center flex flex-col items-center">
 
-                {/* We key this by bannerIndex so the text animates when the banner changes */}
-                <div key={bannerIndex} className="pointer-events-auto animate-fade-in">
+                    {/* TITLE FIRST */}
                     {currentBanner.title && (
-                        <h1 className="text-[#1a1a1a] text-4xl md:text-5xl lg:text-6xl font-serif leading-[1.1] mb-4 max-w-3xl drop-shadow-sm">
+                        <h2 className="text-4xl md:text-5xl font-serif text-fg leading-tight mb-6">
                             {currentBanner.title}
-                        </h1>
+                        </h2>
                     )}
+
+                    {/* DESCRIPTION UNDER TITLE */}
                     {currentBanner.subtitle && (
-                        <p className="text-[#1a1a1a] text-sm md:text-base tracking-wide mb-8 max-w-2xl drop-shadow-sm">
+                        <p className="text-muted text-sm leading-relaxed mb-10">
                             {currentBanner.subtitle}
                         </p>
                     )}
+
                     {currentBanner.ctaText && (
                         <Link
                             to={currentBanner.ctaLink || '#'}
-                            className="inline-block bg-[#ffffff] text-[#000000] border border-[#000000] px-10 py-3.5 text-xs uppercase tracking-widest2 hover:bg-[#000000] hover:text-[#ffffff] transition-colors w-max shadow-md font-medium mt-2"
+                            className="inline-block border border-[#C5A880] text-[#C5A880] px-10 py-3 text-xs uppercase tracking-widest2 hover:bg-[#C5A880] hover:text-white transition-colors w-max"
                         >
                             {currentBanner.ctaText}
                         </Link>
@@ -132,7 +126,7 @@ function HeroSlider({ banners }) {
                 </div>
             </div>
 
-            {/* Slide Indicators (Dots) */}
+            {/* Slide Indicators */}
             {banners.length > 1 && (
                 <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center gap-2">
                     {banners.map((_, idx) => (
@@ -160,11 +154,9 @@ function AlternatingBanner({ banner, reverse }) {
 
     useEffect(() => {
         if (mediaList.length <= 1) return
-
         const timer = setInterval(() => {
             setMediaIndex((prev) => (prev + 1) % mediaList.length)
         }, 4000)
-
         return () => clearInterval(timer)
     }, [mediaList.length])
 
@@ -202,21 +194,21 @@ function AlternatingBanner({ banner, reverse }) {
 
             <div className="w-full md:w-1/2 flex items-center justify-center p-12 md:p-24">
                 <div className="max-w-md text-center flex flex-col items-center">
-                    {banner.subtitle && (
-                        <p className="text-muted text-xs uppercase tracking-widest2 mb-6">
-                            {banner.subtitle}
-                        </p>
-                    )}
+
+                    {/* TITLE FIRST */}
                     {banner.title && (
                         <h2 className="text-4xl md:text-5xl font-serif text-fg leading-tight mb-6">
                             {banner.title}
                         </h2>
                     )}
-                    {banner.description && (
+
+                    {/* DESCRIPTION UNDER TITLE */}
+                    {banner.subtitle && (
                         <p className="text-muted text-sm leading-relaxed mb-10">
-                            {banner.description}
+                            {banner.subtitle}
                         </p>
                     )}
+
                     {banner.ctaText && (
                         <Link
                             to={banner.ctaLink || '#'}
@@ -243,7 +235,6 @@ export default function Home() {
         ]).then(([topRes, editRes]) => {
             const sortedTop = topRes.data.sort((a, b) => a.displayOrder - b.displayOrder)
             const sortedEdit = editRes.data.sort((a, b) => a.displayOrder - b.displayOrder)
-
             setTopBanners(sortedTop)
             setEditorialBanners(sortedEdit)
         }).catch(() => {

@@ -11,8 +11,21 @@ export default function Products() {
     const load = () => {
         setLoading(true)
         api.get('/admin/products')
-            .then(r => setProducts(r.data))
-            .catch(() => toast.error('Failed to load products'))
+            .then(r => {
+                // SAFETY NET: Ensure we actually received an array before filtering
+                if (Array.isArray(r.data)) {
+                    setProducts(r.data.filter(p => !p.featured))
+                } else {
+                    console.error("Expected array, got:", r.data)
+                    setProducts([])
+                }
+            })
+            .catch((err) => {
+                // Only show the error if it's a real network failure
+                if (err.response?.status !== 401) {
+                    toast.error('Failed to load products')
+                }
+            })
             .finally(() => setLoading(false))
     }
 

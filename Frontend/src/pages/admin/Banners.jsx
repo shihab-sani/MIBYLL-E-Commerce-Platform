@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
@@ -7,6 +7,7 @@ const empty = {
     title: '', subtitle: '', ctaText: '', ctaLink: '',
     mediaList: [],
     position: 'TOP', linkedProductId: '', displayOrder: 0, active: true,
+    categoryId: '', subCategoryId: '',
 }
 
 export default function Banners() {
@@ -17,7 +18,6 @@ export default function Banners() {
     const [editingId, setEditingId] = useState(null)
     const [saving, setSaving] = useState(false)
     const [loading, setLoading] = useState(true)
-    const [customLinkMode, setCustomLinkMode] = useState(false)
 
     const load = () => {
         setLoading(true)
@@ -34,56 +34,22 @@ export default function Banners() {
     }
     useEffect(load, [])
 
-    const reset = () => { setForm(empty); setEditingId(null); setCustomLinkMode(false) }
+    const reset = () => { setForm(empty); setEditingId(null) }
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
-    const linkOptions = useMemo(() => {
-        const opts = [
-            { group: 'Pages', items: [
-                    { label: 'Home',          value: '/' },
-                    { label: 'All Products',  value: '/shop' },
-                    { label: 'New Arrivals',  value: '/shop?sort=newest' },
-                    { label: 'My Orders',     value: '/orders' },
-                ]},
-        ]
-        if (categories.length > 0) {
-            opts.push({
-                group: 'Categories',
-                items: categories.map(c => ({
-                    label: c.name,
-                    value: `/shop?category=${c.slug}`,
-                })),
-            })
-        }
-        if (products.length > 0) {
-            opts.push({
-                group: 'Products',
-                items: products.map(p => ({
-                    label: p.name,
-                    value: `/product/${p.slug}`,
-                })),
-            })
-        }
-        return opts
-    }, [categories, products])
-
-    const allKnownValues = useMemo(
-        () => linkOptions.flatMap(g => g.items.map(i => i.value)),
-        [linkOptions]
-    )
 
     const onPickProduct = (id) => {
         set('linkedProductId', id)
         const p = products.find(x => String(x.id) === String(id))
         if (p) {
-            if (form.mediaList.length === 0 && p.images?.[0]) {
+            if (!form.mediaList.length && p.images?.[0]) {
                 setForm(f => ({ ...f, mediaList: [{ mediaUrl: p.images[0], mediaType: 'IMAGE' }] }))
             }
             if (!form.title) {
                 setForm(f => ({ ...f, title: p.name }))
             }
             set('ctaLink', `/product/${p.slug}`)
-            setCustomLinkMode(false)
+            set('categoryId', '')
+            set('subCategoryId', '')
         }
     }
 
@@ -93,14 +59,14 @@ export default function Banners() {
         setSaving(true)
         const payload = {
             title: form.title,
-            subtitle: form.subtitle,
+            subtitle: form.subtitle, // acts as Description
             ctaText: form.ctaText,
             ctaLink: form.ctaLink || null,
             position: form.position,
             linkedProductId: form.linkedProductId ? Number(form.linkedProductId) : null,
             displayOrder: Number(form.displayOrder),
             active: form.active,
-            mediaList: form.mediaList // <-- Passing the array
+            mediaList: form.mediaList
         }
         try {
             if (editingId) {
@@ -118,6 +84,17 @@ export default function Banners() {
 
     const edit = (b) => {
         setEditingId(b.id)
+        let catId = '', subId = ''
+        if (b.ctaLink && b.ctaLink.includes('category=')) {
+            const slug = b.ctaLink.split('category=')[1]
+            for (const cat of categories) {
+                if (cat.slug === slug) { catId = cat.id; break; }
+                if (cat.subcategories) {
+                    const sub = cat.subcategories.find(s => s.slug === slug)
+                    if (sub) { catId = cat.id; subId = sub.id; break; }
+                }
+            }
+        }
         setForm({
             title: b.title || '',
             subtitle: b.subtitle || '',
@@ -128,8 +105,9 @@ export default function Banners() {
             linkedProductId: b.linkedProductId || '',
             displayOrder: b.displayOrder ?? 0,
             active: b.active,
+            categoryId: catId,
+            subCategoryId: subId
         })
-        setCustomLinkMode(!!b.ctaLink && !allKnownValues.includes(b.ctaLink))
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -149,6 +127,9 @@ export default function Banners() {
         } catch { toast.error('Move failed') }
     }
 
+    const activeMainCategory = categories.find(c => c.id === form.categoryId)
+    const subcategories = activeMainCategory?.subcategories || []
+
     const borderColor = { borderColor: 'rgb(var(--cbord))' }
     const surfaceBg   = { background: 'rgb(var(--surface))' }
 
@@ -157,7 +138,7 @@ export default function Banners() {
             <div>
                 <h1 className="text-3xl font-serif text-fg">Banners</h1>
                 <p className="text-xs text-muted mt-1">
-                    TOP banners appear as the full-screen homepage hero. EDITORIAL banners stack one by one below it.
+                    TOP banners appear as the hero. EDITORIAL banners stack one by one on the homepage.
                 </p>
             </div>
 
@@ -188,29 +169,29 @@ export default function Banners() {
                     </div>
                 </div>
 
-                {/* BASIC */}
+                {/* TITLE & DESCRIPTION */}
                 <div className="grid md:grid-cols-2 gap-5">
                     <div className="md:col-span-2">
-                        <label className="label-field">Headline (optional)</label>
+                        <label className="label-field">Title</label>
                         <textarea rows="2" value={form.title} onChange={e => set('title', e.target.value)}
                                   placeholder="The Art of&#10;Quiet Luxury"
                                   className="input-field resize-none" />
                     </div>
 
-                    <div>
-                        <label className="label-field">Subtitle (optional)</label>
-                        <input value={form.subtitle} onChange={e => set('subtitle', e.target.value)}
-                               placeholder="Autumn / Winter Collection" className="input-field" />
+                    <div className="md:col-span-2">
+                        <label className="label-field">Description</label>
+                        <textarea rows="2" value={form.subtitle} onChange={e => set('subtitle', e.target.value)}
+                                  placeholder="Autumn / Winter Collection" className="input-field resize-none" />
                     </div>
 
                     <div>
-                        <label className="label-field">CTA Text (optional)</label>
+                        <label className="label-field">Button Text (optional)</label>
                         <input value={form.ctaText} onChange={e => set('ctaText', e.target.value)}
                                placeholder="Explore the Collection" className="input-field" />
                     </div>
                 </div>
 
-                {/* LINK PRODUCT */}
+                {/* LINK TO PRODUCT */}
                 <div>
                     <label className="label-field">Link to a Product (optional)</label>
                     <select value={form.linkedProductId}
@@ -223,44 +204,58 @@ export default function Banners() {
                     </select>
                 </div>
 
-                {/* CTA LINK DROPDOWN */}
-                <div>
-                    <label className="label-field">CTA / Click-through Link</label>
-                    <select
-                        value={customLinkMode ? '__custom__' : (form.ctaLink || '')}
-                        onChange={(e) => {
-                            const v = e.target.value
-                            if (v === '__custom__') {
-                                setCustomLinkMode(true)
-                            } else {
-                                setCustomLinkMode(false)
-                                set('ctaLink', v)
-                            }
-                        }}
-                        className="input-field"
-                    >
-                        <option value="">— None —</option>
-                        {linkOptions.map(g => (
-                            <optgroup key={g.group} label={g.group}>
-                                {g.items.map(it => (
-                                    <option key={it.value} value={it.value}>{it.label}</option>
-                                ))}
-                            </optgroup>
-                        ))}
-                        <option value="__custom__">Custom URL…</option>
-                    </select>
+                {/* LINK TO CATEGORY / SUBCATEGORY */}
+                <div className="grid md:grid-cols-2 gap-5">
+                    <div>
+                        <label className="label-field">Link to Category</label>
+                        <select
+                            value={form.categoryId}
+                            onChange={(e) => {
+                                const catId = e.target.value
+                                const cat = categories.find(c => c.id === catId)
+                                setForm(f => ({
+                                    ...f,
+                                    categoryId: catId,
+                                    subCategoryId: '',
+                                    ctaLink: cat ? `/shop?category=${cat.slug}` : '',
+                                    linkedProductId: ''
+                                }))
+                            }}
+                            className="input-field"
+                        >
+                            <option value="">— None —</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                    {customLinkMode && (
-                        <input
-                            value={form.ctaLink}
-                            onChange={e => set('ctaLink', e.target.value)}
-                            placeholder="/shop?category=women  or  /product/slug"
-                            className="input-field mt-2 font-mono text-xs"
-                        />
+                    {subcategories.length > 0 && (
+                        <div>
+                            <label className="label-field">Link to Subcategory</label>
+                            <select
+                                value={form.subCategoryId}
+                                onChange={(e) => {
+                                    const subId = e.target.value
+                                    const sub = subcategories.find(s => s.id === subId)
+                                    setForm(f => ({
+                                        ...f,
+                                        subCategoryId: subId,
+                                        ctaLink: sub ? `/shop?category=${sub.slug}` : `/shop?category=${activeMainCategory.slug}`
+                                    }))
+                                }}
+                                className="input-field"
+                            >
+                                <option value="">— None (Main Category) —</option>
+                                {subcategories.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     )}
                 </div>
 
-                {/* MEDIA (FIXED: Only one uploader block is here now) */}
+                {/* MEDIA */}
                 <div>
                     <label className="label-field">Media (Images & Videos) *</label>
                     <ImageUploader
@@ -311,15 +306,13 @@ export default function Banners() {
             {loading ? (
                 <div className="text-sm text-muted py-10">Loading…</div>
             ) : banners.length === 0 ? (
-                <div className="border py-16 text-center text-xs text-muted"
-                     style={{ ...surfaceBg, ...borderColor }}>
+                <div className="border py-16 text-center text-xs text-muted" style={{ ...surfaceBg, ...borderColor }}>
                     No banners yet. Add one above.
                 </div>
             ) : (
                 <div className="space-y-3">
                     {banners.map((b, idx) => (
-                        <div key={b.id} className="border flex flex-wrap items-center gap-4 p-4"
-                             style={{ ...surfaceBg, ...borderColor }}>
+                        <div key={b.id} className="border flex flex-wrap items-center gap-4 p-4" style={{ ...surfaceBg, ...borderColor }}>
                             <div className="w-32 h-20 bg-sand overflow-hidden shrink-0">
                                 {b.mediaList?.[0]?.mediaType === 'VIDEO' ? (
                                     <video src={b.mediaList[0].mediaUrl} muted className="w-full h-full object-cover" />
@@ -330,48 +323,22 @@ export default function Banners() {
 
                             <div className="flex-1 min-w-[200px]">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm text-fg font-medium truncate">
-                                        {b.title || '(no headline)'}
-                                    </p>
+                                    <p className="text-sm text-fg font-medium truncate">{b.title || '(no title)'}</p>
                                     <span className={`text-[9px] uppercase tracking-widest2 px-2 py-0.5
-                    ${b.position === 'EDITORIAL'
-                                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
-                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'}`}>
-                    {b.position || 'TOP'}
-                  </span>
-                                    <span className={`text-[9px] uppercase tracking-widest2 px-2 py-0.5
-                    ${b.active
-                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                                        : 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'}`}>
-                    {b.active ? 'Active' : 'Hidden'}
-                  </span>
-                                    {b.mediaList?.length > 1 && (
-                                        <span className="text-[9px] uppercase tracking-widest2 text-muted border border-c px-2 py-0.5">
-                          {b.mediaList.length} Media Files
-                      </span>
-                                    )}
+                                        ${b.position === 'EDITORIAL' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'}`}>
+                                        {b.position || 'TOP'}
+                                    </span>
                                 </div>
-                                {b.subtitle && <p className="text-[11px] text-muted mt-1">{b.subtitle}</p>}
+                                {b.subtitle && <p className="text-[11px] text-muted mt-1 truncate">{b.subtitle}</p>}
                             </div>
 
                             <div className="flex items-center gap-1">
-                                <button onClick={() => move(b, -1)}
-                                        disabled={idx === 0 || banners.findIndex(x => x.id === b.id) === 0}
-                                        className="w-8 h-8 border text-fg disabled:opacity-30 hover:border-fg"
-                                        style={borderColor}>↑</button>
-                                <button onClick={() => move(b, 1)}
-                                        className="w-8 h-8 border text-fg hover:border-fg"
-                                        style={borderColor}>↓</button>
+                                <button onClick={() => move(b, -1)} disabled={idx === 0} className="w-8 h-8 border text-fg disabled:opacity-30" style={borderColor}>↑</button>
+                                <button onClick={() => move(b, 1)} className="w-8 h-8 border text-fg" style={borderColor}>↓</button>
                             </div>
 
-                            <button onClick={() => edit(b)}
-                                    className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">
-                                Edit
-                            </button>
-                            <button onClick={() => remove(b)}
-                                    className="text-[10px] uppercase tracking-widest2 text-red-600 hover:underline">
-                                Delete
-                            </button>
+                            <button onClick={() => edit(b)} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">Edit</button>
+                            <button onClick={() => remove(b)} className="text-[10px] uppercase tracking-widest2 text-red-600 hover:underline">Delete</button>
                         </div>
                     ))}
                 </div>
