@@ -148,11 +148,21 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/categories/featured-available")
+    public ResponseEntity<List<CategoryDto>> getFeaturedAvailableCategories() {
+        return ResponseEntity.ok(categoryService.getFeaturedAvailableCategories());
+    }
+
+    @GetMapping("/categories/normal-available") // <-- Added /categories
+    public ResponseEntity<List<CategoryDto>> getNormalAvailableCategories() {
+        return ResponseEntity.ok(categoryService.getCategoriesWithNormalProducts());
+    }
+
     /* ============================================================
        ORDERS
        ============================================================ */
 
-    @GetMapping("/orders")                                          // <-- RESTORED
+    @GetMapping("/orders")
     public ResponseEntity<List<OrderDto>> allOrders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
@@ -247,6 +257,16 @@ public class AdminController {
     @GetMapping("/requests")
     public ResponseEntity<List<RequestDto>> allRequests() {
         return ResponseEntity.ok(requestService.getAllRequests());
+    }
+    
+    @PatchMapping("/requests/{id}/status")
+    public ResponseEntity<RequestDto> updateRequestStatus(
+            @AuthenticationPrincipal UserDetails ud,
+            @PathVariable UUID id,
+            @RequestBody UpdateRequestDto req) {
+        RequestDto updated = requestService.updateStatus(id, req.status(), req.adminReply());
+        auditService.log(ud.getUsername(), roleOf(ud), "REQUEST_UPDATED", "REQUEST", String.valueOf(id), "Status: " + req.status());
+        return ResponseEntity.ok(updated);
     }
 
     /* ============================================================
