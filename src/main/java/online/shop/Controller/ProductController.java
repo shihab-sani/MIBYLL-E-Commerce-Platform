@@ -21,12 +21,10 @@ public class ProductController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean featured,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "newest") String sort) {
-        return ResponseEntity.ok(productService.search(category, q, page, size, sort));
+        return ResponseEntity.ok(productService.search(category, q, featured, page, size, sort));
     }
 
     @GetMapping("/{slug}")

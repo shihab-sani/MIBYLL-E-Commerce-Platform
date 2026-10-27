@@ -22,17 +22,15 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
         JOIN p.category c
         LEFT JOIN c.parent parent
         WHERE p.active = true
-          AND (
-            :categorySlug IS NULL OR
-            c.slug = :categorySlug OR
-            parent.slug = :categorySlug
-          )
+          AND (:featured IS NULL OR p.featured = :featured)
+          AND (:categorySlug IS NULL OR c.slug = :categorySlug OR parent.slug = :categorySlug)
           AND (:q IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%'))
                           OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))
         ORDER BY p.createdAt DESC
-   \s""")
+    """)
     Page<Product> search(@Param("categorySlug") String categorySlug,
                          @Param("q") String q,
+                         @Param("featured") Boolean featured,
                          Pageable pageable);
 
     long countByStockQuantityLessThan(int threshold);

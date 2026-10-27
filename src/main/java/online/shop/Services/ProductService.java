@@ -37,7 +37,7 @@ public class ProductService {
     /* ------------ PUBLIC READ ------------ */
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> search(String categorySlug, String q, int page, int size, String sort) {
+    public Page<ProductDto> search(String categorySlug, String q, Boolean featured, int page, int size, String sort) {
 
         Sort sorting = switch (sort == null ? "" : sort) {
             case "price_asc"  -> Sort.by(Sort.Direction.ASC, "price");
@@ -50,7 +50,7 @@ public class ProductService {
         String cat = (categorySlug == null || categorySlug.isBlank()) ? null : categorySlug;
         String query = (q == null || q.isBlank()) ? null : q.trim();
 
-        return productRepository.search(cat, query, pageable).map(this::toDto);
+        return productRepository.search(cat, query, featured, pageable).map(this::toDto);
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +90,7 @@ public class ProductService {
                 .stockQuantity(req.stockQuantity())
                 .brand(req.brand())
                 .active(req.active() == null || req.active())
+                .featured(req.featured())
                 .build();
 
         p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
@@ -127,6 +128,7 @@ public class ProductService {
         p.setDiscountPercent(req.discountPercent() == null ? 0 : req.discountPercent());
         p.setStockQuantity(req.stockQuantity());
         p.setBrand(req.brand());
+        p.setFeatured(req.featured());
         if (req.active() != null) p.setActive(req.active());
 
         p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
@@ -251,7 +253,7 @@ public class ProductService {
                 p.getStockQuantity(), p.getBrand(), p.isActive(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                images, p.getCreatedAt(), p.getSizeType(), variants
+                images, p.getCreatedAt(), p.getSizeType(), variants, p.isFeatured()
         );
     }
 }

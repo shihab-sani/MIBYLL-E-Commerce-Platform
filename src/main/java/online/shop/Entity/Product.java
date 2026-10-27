@@ -75,4 +75,8 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private java.util.List<ProductVariant> variants = new java.util.ArrayList<>();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean featured = false;
 }

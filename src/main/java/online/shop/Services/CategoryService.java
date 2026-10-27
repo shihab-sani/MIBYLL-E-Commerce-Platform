@@ -15,6 +15,7 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +67,20 @@ public class CategoryService {
                 .displayOrder(maxOrder + 1) // Assign next position
                 .build();
         return toDto(categoryRepository.save(c));
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getFeaturedAvailableCategories() {
+        return categoryRepository.findCategoriesWithNoNormalProducts().stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getCategoriesWithNormalProducts() {
+        return categoryRepository.findCategoriesWithNormalProducts().stream()
+                .map(this::toDto) // <-- Fixed toDto
+                .collect(Collectors.toList());
     }
 
     @Transactional
