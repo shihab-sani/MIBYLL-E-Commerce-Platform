@@ -1,6 +1,7 @@
 package online.shop.Services;
 
 import lombok.RequiredArgsConstructor;
+import online.shop.DTOs.ProductDtos.*;
 import online.shop.DTOs.RequestDtos.*;
 import online.shop.Entity.CustomerRequest;
 import online.shop.Entity.Product;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -46,12 +48,24 @@ public class RequestService {
                 .stream().map(this::toDto).toList();
     }
 
+    @Transactional
+    public RequestDto updateStatus(UUID id, String status, String adminReply) {
+        // FIXED: Changed ProductRequest to CustomerRequest
+        CustomerRequest req = requestRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Request not found"));
+
+        req.setStatus(status);
+        req.setAdminReply(adminReply);
+
+        return toDto(requestRepository.save(req));
+    }
+
     private RequestDto toDto(CustomerRequest r) {
         String img = r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl();
         return new RequestDto(
                 r.getId(), r.getUser().getFullName(), r.getUser().getEmail(),
                 r.getProduct().getId(), r.getProduct().getName(), img,
-                r.getMessage(), r.getStatus(), r.getCreatedAt()
+                r.getMessage(), r.getStatus(), r.getAdminReply(), r.getCreatedAt()
         );
     }
 }

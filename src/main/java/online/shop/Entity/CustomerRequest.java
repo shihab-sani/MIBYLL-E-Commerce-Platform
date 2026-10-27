@@ -35,6 +35,9 @@ public class CustomerRequest {
     @Builder.Default
     private String status = "PENDING";
 
+    @Column(length = 2000)
+    private String adminReply;
+
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }
