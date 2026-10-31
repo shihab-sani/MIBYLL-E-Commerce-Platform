@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../api/axios'
 import ProductCard from '../components/ProductCard'
@@ -63,6 +63,7 @@ function FeaturedImageSlider({ images }) {
 
 export default function Shop() {
     const [params, setParams] = useSearchParams()
+    const navigate = useNavigate()
     const { isAuthenticated } = useAuth()
 
     const [products, setProducts] = useState([])
@@ -82,6 +83,12 @@ export default function Shop() {
     const q = params.get('q') || ''
     const sort = params.get('sort') || 'newest'
     const page = parseInt(params.get('page') || '0', 10)
+
+    useEffect(() => {
+        if (!category && !q) {
+            navigate('/', { replace: true })
+        }
+    }, [category, q, navigate])
 
     useEffect(() => {
         if (selectedProduct) {
@@ -280,11 +287,6 @@ export default function Shop() {
                             </>
                         ) : (
                             <>
-                                <button onClick={() => update('category', '')}
-                                        className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1
-                                            ${!category ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}>
-                                    All
-                                </button>
                                 {categories.map(c => (
                                     <button key={c.id} onClick={() => update('category', c.slug)}
                                             className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1

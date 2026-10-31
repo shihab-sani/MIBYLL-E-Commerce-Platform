@@ -111,18 +111,6 @@ export default function ProductDetail() {
 
     return (
         <div className="max-w-[1500px] mx-auto px-5 lg:px-10 pt-32 pb-10 lg:pb-16">
-            <nav className="text-[10px] uppercase tracking-widest2 text-neutral-500 mb-8">
-                <Link to="/" className="hover:text-ink">Home</Link>
-                <span className="mx-2">/</span>
-                <Link to="/shop" className="hover:text-ink">Shop</Link>
-                {product.categoryName && (
-                    <>
-                        <span className="mx-2">/</span>
-                        <span>{product.categoryName}</span>
-                    </>
-                )}
-            </nav>
-
             <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
                 {/* GALLERY */}
                 <div className="flex gap-4">
@@ -148,7 +136,7 @@ export default function ProductDetail() {
                 </div>
 
                 {/* INFO */}
-                <div className="lg:pt-4 lg:sticky lg:top-28 self-start">
+                <div className="lg:pt-4 lg:sticky lg:top-28 self-start min-w-0 w-full">
                     {product.brand && (
                         <p className="text-[10px] uppercase tracking-widest2 text-neutral-500 mb-3">{product.brand}</p>
                     )}
@@ -166,7 +154,7 @@ export default function ProductDetail() {
                         )}
                     </div>
 
-                    <p className="text-sm text-neutral-600 leading-relaxed mb-10">{product.description}</p>
+                    <p className="text-sm text-neutral-600 leading-relaxed mb-10 break-words whitespace-pre-wrap">{product.description}</p>
 
                     {/* VARIANTS (COLOR/DESIGN) */}
                     {product.variants?.length > 0 && (
@@ -261,7 +249,7 @@ export default function ProductDetail() {
                                     )}
                                 </div>
                                 <div className="mt-auto">
-                                    <h3 className="text-sm font-medium text-fg mb-1 group-hover:opacity-70 transition-opacity">{rp.name}</h3>
+                                    <h3 className="text-sm font-medium text-fg mb-1 group-hover:opacity-70 transition-opacity break-words">{rp.name}</h3>
                                     <p className="text-sm text-fg">{formatPrice(rp.finalPrice)}</p>
                                 </div>
                             </Link>
