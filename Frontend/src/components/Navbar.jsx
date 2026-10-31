@@ -28,16 +28,13 @@ export default function Navbar() {
         api.get('/categories').then(r => setCategories(r.data)).catch(() => {})
     }, [location.pathname])
 
-    // 1. Reset everything when navigating to a new page
     useEffect(() => {
         setSearchOpen(false)
         setDrawerOpen(false)
     }, [location.pathname, location.search])
 
-    // 2. THE FIX: Reset the subcategory panel whenever the drawer closes
     useEffect(() => {
         if (!drawerOpen) {
-            // Wait for the slide-out animation (500ms) to finish before resetting
             const timer = setTimeout(() => setActiveCategory(null), 500)
             return () => clearTimeout(timer)
         }
@@ -82,14 +79,15 @@ export default function Navbar() {
             <header
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+                className={`fixed top-0 left-0 w-full z-[100] transition-colors duration-300 transform-gpu will-change-transform ${
                     isSolid
-                        ? 'bg-[#050510] text-white shadow-xl py-0'
-                        : 'bg-transparent text-white mix-blend-difference py-4'
+                        ? 'bg-[#050510] text-white shadow-xl'
+                        : 'bg-transparent text-white' 
                 }`}
             >
                 <div className="max-w-[1500px] mx-auto px-5 lg:px-10">
-                    <div className="grid grid-cols-3 items-center h-16 lg:h-20">
+                    {/* 3. Increased fixed height to h-20 lg:h-24 to compensate for the removed padding */}
+                    <div className="grid grid-cols-3 items-center h-20 lg:h-24">
                         <div className="flex justify-start">
                             <button onClick={() => setDrawerOpen(true)} aria-label="Menu" className="hover:opacity-60 transition-opacity">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -142,7 +140,6 @@ export default function Navbar() {
 
             {/* MULTI-TIER SLIDING DRAWER */}
             <div className={`fixed inset-0 z-[100] transition-opacity duration-300 ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-
                 {/* Backdrop */}
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
 
@@ -150,13 +147,11 @@ export default function Navbar() {
                 <div className={`absolute left-0 top-0 h-full w-[320px] sm:w-[380px] bg-surface shadow-2xl overflow-hidden
                                 transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-                    {/* WRAPPER THAT SLIDES BETWEEN PANELS */}
                     <div className={`relative w-full h-full transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
                                     ${activeCategory ? '-translate-x-full' : 'translate-x-0'}`}>
 
                         {/* --- PANEL 1: MAIN MENU --- */}
                         <div className="absolute top-0 left-0 w-full h-full flex flex-col bg-surface text-fg">
-
                             <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
                                 <button onClick={() => setDrawerOpen(false)} className="hover:opacity-50 transition-opacity text-fg">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -170,25 +165,21 @@ export default function Navbar() {
                             <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
                                 <nav className="flex flex-col">
                                     {categories.map(c => {
-                                        // Check if this category has subcategories
                                         const hasSubcategories = c.subcategories && c.subcategories.length > 0;
-
                                         return (
                                             <button
                                                 key={c.id}
                                                 onClick={() => {
                                                     if (hasSubcategories) {
-                                                        setActiveCategory(c); // Opens sub-panel
+                                                        setActiveCategory(c);
                                                     } else {
-                                                        setDrawerOpen(false); // Closes menu
-                                                        navigate(`/shop?category=${c.slug}`); // Directs to shop
+                                                        setDrawerOpen(false);
+                                                        navigate(`/shop?category=${c.slug}`);
                                                     }
                                                 }}
                                                 className="px-8 py-5 text-left text-sm uppercase tracking-widest2 border-b border-c flex justify-between items-center transition-all hover:bg-cbord/10 text-fg/80 hover:text-fg"
                                             >
                                                 {c.name}
-
-                                                {/* Only show the arrow if subcategories exist */}
                                                 {hasSubcategories && (
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <path d="M9 18l6-6-6-6" />
@@ -199,7 +190,6 @@ export default function Navbar() {
                                     })}
                                 </nav>
 
-                                {/* Account & Settings */}
                                 <div className="mt-12 px-8 pb-12 flex flex-col gap-6">
                                     <h3 className="text-[10px] text-muted uppercase tracking-widest border-b border-c pb-2">Account</h3>
                                     {isAuthenticated ? (
@@ -238,7 +228,6 @@ export default function Navbar() {
 
                         {/* --- PANEL 2: SUBCATEGORIES --- */}
                         <div className="absolute top-0 left-full w-full h-full flex flex-col bg-surface text-fg">
-
                             <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
                                 <button onClick={() => setActiveCategory(null)} className="flex items-center gap-2 hover:opacity-50 transition-opacity text-fg text-xs uppercase tracking-wider font-medium">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -269,7 +258,7 @@ export default function Navbar() {
                                     {(activeCategory?.subcategories || []).map(sub => (
                                         <Link
                                             key={sub.slug}
-                                            to={`/shop?category=${sub.slug}`} // <-- FIXED: Only pass the category slug
+                                            to={`/shop?category=${sub.slug}`}
                                             onClick={() => setDrawerOpen(false)}
                                             className="group flex justify-between items-center py-4 pl-4 pr-2 border-b border-c hover:border-fg transition-colors"
                                         >
