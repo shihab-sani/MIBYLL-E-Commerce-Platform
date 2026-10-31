@@ -22,16 +22,18 @@ export default function AdminLayout() {
     const { user, isAdmin } = useAuth()
     const visibleNav = nav.filter(item => !item.adminOnly || isAdmin)
     const location = useLocation()
+
     return (
-        <div className="min-h-screen flex" style={{ background: 'rgb(var(--paper))' }}>
+        <div className="flex h-screen bg-surface overflow-hidden" style={{ background: 'rgb(var(--paper))' }}>
             {/* SIDEBAR */}
             <aside className="w-60 bg-ink text-white hidden lg:flex flex-col fixed h-screen">
-                <div className="p-7 border-b border-white/10">
+                <div className="p-7 border-b border-white/10 shrink-0">
                     <Link to="/" className="text-lg font-serif tracking-[0.3em] uppercase">Mibyll</Link>
                     <p className="text-[9px] uppercase tracking-widest2 text-neutral-500 mt-2">Admin Console</p>
                 </div>
 
-                <nav className="flex-1 p-5 space-y-1">
+                {/* Added overflow-y-auto and custom-scrollbar here */}
+                <nav className="flex-1 p-5 space-y-1 overflow-y-auto custom-scrollbar">
                     {visibleNav.map(item => (
                         <NavLink key={item.to} to={item.to} end={item.end}
                                  className={({ isActive }) =>
@@ -42,7 +44,7 @@ export default function AdminLayout() {
                     ))}
                 </nav>
 
-                <div className="p-5 border-t border-white/10">
+                <div className="p-5 border-t border-white/10 shrink-0">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-[10px] text-neutral-500 uppercase tracking-widest2">Signed in</p>
                         <ThemeToggle className="text-neutral-400 hover:text-white" />
@@ -55,8 +57,9 @@ export default function AdminLayout() {
             </aside>
 
             {/* MAIN */}
-            <div className="flex-1 lg:ml-60">
-                <div className="lg:hidden bg-ink text-white px-5 py-4 flex items-center justify-between">
+            {/* Added h-full and overflow-y-auto here so the main content can scroll */}
+            <div className="flex-1 lg:ml-60 h-full overflow-y-auto">
+                <div className="lg:hidden bg-ink text-white px-5 py-4 flex items-center justify-between shrink-0">
                     <span className="font-serif tracking-[0.3em] uppercase text-sm">Mibyll Admin</span>
                     <div className="flex items-center gap-5">
                         <ThemeToggle />
@@ -64,7 +67,7 @@ export default function AdminLayout() {
                     </div>
                 </div>
 
-                <div className="lg:hidden overflow-x-auto no-scrollbar border-b border-c bg-surface">
+                <div className="lg:hidden overflow-x-auto no-scrollbar border-b border-c bg-surface shrink-0">
                     <div className="flex">
                         {visibleNav.map(item => (
                             <NavLink key={item.to} to={item.to} end={item.end}
