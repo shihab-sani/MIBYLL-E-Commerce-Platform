@@ -38,7 +38,6 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductDto> search(String categorySlug, String q, Boolean featured, int page, int size, String sort) {
-
         Sort sorting = switch (sort == null ? "" : sort) {
             case "price_asc"  -> Sort.by(Sort.Direction.ASC, "price");
             case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
@@ -116,9 +115,15 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Product not found"));
 
-        // Capture old images
+        // 1. Capture old main images
         List<String> oldImages = p.getImages().stream()
                 .map(ProductImage::getImageUrl)
+                .toList();
+
+        // 2. Capture old variant images
+        List<String> oldVariantImages = p.getVariants().stream()
+                .map(ProductVariant::getImageUrl)
+                .filter(url -> url != null && !url.isBlank())
                 .toList();
 
         p.setName(req.name());
@@ -151,12 +156,23 @@ public class ProductService {
         attachImages(p, req.images());
         Product saved = productRepository.save(p);
 
-        // Determine which images were removed during the update
+        // 3. Determine which main images were removed during the update
         List<String> newImages = req.images() != null ? req.images() : List.of();
-        List<String> imagesToDelete = oldImages.stream()
+        List<String> imagesToDelete = new ArrayList<>(oldImages.stream()
                 .filter(img -> !newImages.contains(img))
+                .toList());
+
+        // 4. Determine which variant images were removed during the update
+        List<String> newVariantImages = req.variants() != null
+                ? req.variants().stream().map(VariantRequest::imageUrl).filter(url -> url != null).toList()
+                : List.of();
+
+        List<String> variantImagesToDelete = oldVariantImages.stream()
+                .filter(img -> !newVariantImages.contains(img))
                 .toList();
 
+        // 5. Combine and delete files
+        imagesToDelete.addAll(variantImagesToDelete);
         registerFileDeletionAfterCommit(imagesToDelete);
 
         return toDto(saved);
@@ -170,9 +186,16 @@ public class ProductService {
         cartItemRepository.deleteByProductId(id);
         orderItemRepository.nullifyProductReference(id);
 
-        List<String> imageUrls = p.getImages().stream()
+        // Collect main images
+        List<String> imageUrls = new ArrayList<>(p.getImages().stream()
                 .map(ProductImage::getImageUrl)
-                .toList();
+                .toList());
+
+        // Collect variant images
+        p.getVariants().stream()
+                .map(ProductVariant::getImageUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .forEach(imageUrls::add);
 
         productRepository.delete(p);
         registerFileDeletionAfterCommit(imageUrls);
@@ -189,7 +212,6 @@ public class ProductService {
                 }
             });
         } else {
-            // Fallback (shouldn't happen inside @Transactional, but safe)
             fileStorageService.deleteFiles(fileUrls);
         }
     }
