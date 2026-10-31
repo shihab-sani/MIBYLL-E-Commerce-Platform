@@ -17,15 +17,14 @@ export default function ProductForm() {
     const isEdit = !!id
 
     const [form, setForm] = useState(empty)
+    const [categories, setCategories] = useState([])
     const [normalCategories, setNormalCategories] = useState([])
     const [featuredCategories, setFeaturedCategories] = useState([])
     const [loading, setLoading] = useState(isEdit)
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        // Fetch ONLY categories with normal products
         api.get('/admin/categories/normal-available').then(r => setNormalCategories(r.data)).catch(() => {})
-        // Fetch ONLY categories with featured products
         api.get('/admin/categories/featured-available').then(r => setFeaturedCategories(r.data)).catch(() => {})
     }, [])
 
@@ -51,6 +50,32 @@ export default function ProductForm() {
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+    // --- VARIANT LOGIC ---
+    const addVariant = () => {
+        setForm(f => ({
+            ...f,
+            variants: [...f.variants, { name: '', imageUrl: '' }]
+        }))
+    }
+
+    const updateVariant = (index, key, value) => {
+        setForm(f => {
+            const newVariants = f.variants.map((v, i) => {
+                if (i === index) {
+                    return { ...v, [key]: value }
+                }
+                return v
+            })
+            return { ...f, variants: newVariants }
+        })
+    }
+
+    const removeVariant = (index) => {
+        const newVariants = form.variants.filter((_, i) => i !== index)
+        setForm(f => ({ ...f, variants: newVariants }))
+    }
+    // ---------------------
+
     const submit = async (e) => {
         e.preventDefault()
         setSaving(true)
@@ -65,7 +90,8 @@ export default function ProductForm() {
             stockQuantity: finalStock, brand: form.brand,
             active: form.active, featured: form.featured,
             categoryId: finalCategoryId || null,
-            images: form.images, sizeType: form.sizeType, variants: form.variants,
+            images: form.images, sizeType: form.sizeType,
+            variants: form.variants.filter(v => v.name.trim() !== ''), // Only send valid variants
         }
         try {
             if (isEdit) await api.put(`/admin/products/${id}`, payload)
@@ -79,7 +105,6 @@ export default function ProductForm() {
 
     if (loading) return <div className="text-sm text-muted">Loading…</div>
 
-    // Determine which list to show based on the checkbox
     const displayCategories = form.featured ? featuredCategories : normalCategories
     const activeMainCategory = displayCategories.find(c => c.id === form.categoryId)
     const subcategories = activeMainCategory?.subcategories || []
@@ -122,7 +147,6 @@ export default function ProductForm() {
                                     checked={form.featured}
                                     onChange={e => {
                                         const isChecked = e.target.checked
-                                        // Reset category when switching modes to prevent mismatched IDs
                                         setForm(f => ({ ...f, featured: isChecked, categoryId: '', subCategoryId: '' }))
                                     }}
                                 />
@@ -153,7 +177,6 @@ export default function ProductForm() {
                                 {displayCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
 
-                            {/* Warning Message if no featured categories are available */}
                             {form.featured && displayCategories.length === 0 && (
                                 <p className="text-[10px] text-amber-500 mt-1">
                                     No available categories for Featured products. Please create a new category in the Categories tab.
@@ -180,6 +203,61 @@ export default function ProductForm() {
                             <option value="NONE">No Sizes</option>
                         </select>
                     </div>
+                </section>
+
+                {/* DESIGN / COLOR VARIANTS */}
+                <section className="card p-6 space-y-5">
+                    <div className="flex items-center justify-between border-b border-cbord pb-4">
+                        <h2 className="text-[11px] uppercase tracking-widest2 text-fg">
+                            Design / Color Variants
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={addVariant}
+                            className="text-[11px] uppercase tracking-widest2 text-fg hover:underline"
+                        >
+                            + Add Variant
+                        </button>
+                    </div>
+
+                    {form.variants.length === 0 ? (
+                        <p className="text-xs text-muted">No variants added. Add a variant if this product comes in different colors or designs.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {form.variants.map((variant, index) => (
+                                <div key={index} className="grid md:grid-cols-2 gap-4 items-end bg-cbord/5 p-4 border border-cbord relative">
+
+                                    <div>
+                                        <label className="label-field">Variant Name (e.g. Red, Floral)</label>
+                                        <input
+                                            value={variant.name}
+                                            onChange={e => updateVariant(index, 'name', e.target.value)}
+                                            className="input-field"
+                                            placeholder="Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label-field">Variant Image</label>
+                                        <ImageUploader
+                                            value={variant.imageUrl ? [variant.imageUrl] : []}
+                                            onChange={(urls) => updateVariant(index, 'imageUrl', urls[0] || '')}
+                                            multiple={false}
+                                        />
+                                    </div>
+
+                                    {/* Remove Button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => removeVariant(index)}
+                                        className="absolute -top-2 -right-2 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-700 transition-colors shadow-sm"
+                                        title="Remove Variant"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* PRICING */}
