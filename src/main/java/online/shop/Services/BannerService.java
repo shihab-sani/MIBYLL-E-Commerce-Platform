@@ -61,6 +61,13 @@ public class BannerService {
         Banner b = bannerRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Banner not found"));
 
+        // 1. Capture Old Media URLs before updating
+        List<String> oldMediaUrls = b.getMediaList().stream()
+                .map(BannerMedia::getMediaUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .toList();
+
+        // 2. Update Fields
         b.setTitle(req.title());
         b.setSubtitle(req.subtitle());
         b.setCtaText(req.ctaText());
@@ -70,10 +77,25 @@ public class BannerService {
         if (req.displayOrder() != null) b.setDisplayOrder(req.displayOrder());
         if (req.active() != null) b.setActive(req.active());
 
+        // 3. Update Media
         b.getMediaList().clear();
         attachMedia(b, req.mediaList());
 
-        return toDto(bannerRepository.save(b));
+        Banner saved = bannerRepository.save(b);
+
+        // 4. Determine which files were removed
+        List<String> newMediaUrls = req.mediaList() != null
+                ? req.mediaList().stream().map(BannerMediaRequest::mediaUrl).toList()
+                : List.of();
+
+        List<String> mediaToDelete = oldMediaUrls.stream()
+                .filter(url -> !newMediaUrls.contains(url))
+                .toList();
+
+        // 5. Delete removed files from disk AFTER db commit
+        registerFileDeletionAfterCommit(mediaToDelete);
+
+        return toDto(saved);
     }
 
     @Transactional
@@ -88,17 +110,22 @@ public class BannerService {
 
         bannerRepository.delete(b);
 
-        if (!mediaUrls.isEmpty()) {
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        mediaUrls.forEach(fileStorageService::deleteFile);
-                    }
-                });
-            } else {
-                mediaUrls.forEach(fileStorageService::deleteFile);
-            }
+        // Delete from disk AFTER db commit
+        registerFileDeletionAfterCommit(mediaUrls);
+    }
+
+    private void registerFileDeletionAfterCommit(List<String> fileUrls) {
+        if (fileUrls == null || fileUrls.isEmpty()) return;
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    fileStorageService.deleteFiles(fileUrls);
+                }
+            });
+        } else {
+            fileStorageService.deleteFiles(fileUrls);
         }
     }
 
