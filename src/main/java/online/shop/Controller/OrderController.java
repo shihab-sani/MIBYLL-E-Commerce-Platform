@@ -59,4 +59,22 @@ public class OrderController {
     public ResponseEntity<List<RequestDto>> myRequests(@AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.ok(requestService.getMyRequests(ud.getUsername()));
     }
+
+    @PostMapping("/requests/{id}/reply")
+    public ResponseEntity<Void> replyToRequest(@PathVariable UUID id, @RequestBody ReplyRequestDto req) {
+        requestService.reply(id, "CUSTOMER", req.message());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/requests/{id}/read")
+    public ResponseEntity<Void> markRead(@PathVariable UUID id) {
+        requestService.markAsRead(id, "CUSTOMER");
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/requests/read-all")
+    public ResponseEntity<Void> markAllRead(@AuthenticationPrincipal UserDetails ud) {
+        requestService.markAllAsRead(ud.getUsername(), "CUSTOMER");
+        return ResponseEntity.ok().build();
+    }
 }

@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -28,16 +30,18 @@ public class CustomerRequest {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false, length = 1000)
-    private String message;
-
     @Column(nullable = false)
     @Builder.Default
     private String status = "PENDING";
 
-    @Column(length = 2000)
-    private String adminReply;
+    @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    @Builder.Default
+    private List<RequestMessage> messages = new ArrayList<>();
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    private String size;
+    private String variantName;
 }

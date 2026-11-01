@@ -264,9 +264,21 @@ public class AdminController {
             @AuthenticationPrincipal UserDetails ud,
             @PathVariable UUID id,
             @RequestBody UpdateRequestDto req) {
-        RequestDto updated = requestService.updateStatus(id, req.status(), req.adminReply());
+        RequestDto updated = requestService.updateStatus(id, req.status());
         auditService.log(ud.getUsername(), roleOf(ud), "REQUEST_UPDATED", "REQUEST", String.valueOf(id), "Status: " + req.status());
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/requests/{id}/reply")
+    public ResponseEntity<Void> adminReply(@PathVariable UUID id, @RequestBody ReplyRequestDto req) {
+        requestService.reply(id, "ADMIN", req.message());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/requests/{id}/read")
+    public ResponseEntity<Void> adminMarkRead(@PathVariable UUID id) {
+        requestService.markAsRead(id, "ADMIN");
+        return ResponseEntity.ok().build();
     }
 
     /* ============================================================

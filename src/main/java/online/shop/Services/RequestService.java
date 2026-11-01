@@ -5,6 +5,7 @@ import online.shop.DTOs.ProductDtos.*;
 import online.shop.DTOs.RequestDtos.*;
 import online.shop.Entity.CustomerRequest;
 import online.shop.Entity.Product;
+import online.shop.Entity.RequestMessage;
 import online.shop.Entity.User;
 import online.shop.ExceptionsHandler.ApiException;
 import online.shop.Repositories.CustomerRequestRepository;
@@ -25,14 +26,62 @@ public class RequestService {
 
     @Transactional
     public void createRequest(String email, CreateRequestDto req) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> ApiException.notFound("User not found"));
-        Product product = productRepository.findById(req.productId()).orElseThrow(() -> ApiException.notFound("Product not found"));
+        User user = userRepository.findByEmail(email).orElseThrow();
+        Product product = productRepository.findById(req.productId()).orElseThrow();
 
-        requestRepository.save(CustomerRequest.builder()
-                .user(user)
-                .product(product)
-                .message(req.message())
-                .build());
+        CustomerRequest request = CustomerRequest.builder()
+                .user(user).product(product)
+                .size(req.size()).variantName(req.variantName())
+                .build();
+
+        RequestMessage firstMsg = RequestMessage.builder()
+                .request(request).senderRole("CUSTOMER").message(req.message()).build();
+        request.getMessages().add(firstMsg);
+
+        requestRepository.save(request);
+    }
+
+    @Transactional
+    public void reply(UUID requestId, String role, String text) {
+        CustomerRequest req = requestRepository.findById(requestId).orElseThrow();
+
+        RequestMessage msg = RequestMessage.builder()
+                .request(req).senderRole(role).message(text).build();
+
+        if ("ADMIN".equals(role)) {
+            msg.setReadByAdmin(true);
+            req.setStatus("REPLIED");
+        } else {
+            msg.setReadByCustomer(true);
+            req.setStatus("PENDING"); // Pending admin reply
+        }
+
+        req.getMessages().add(msg);
+        requestRepository.save(req);
+    }
+
+    @Transactional
+    public void markAsRead(UUID requestId, String role) {
+        CustomerRequest req = requestRepository.findById(requestId).orElseThrow();
+        for (RequestMessage msg : req.getMessages()) {
+            if ("CUSTOMER".equals(role) && "ADMIN".equals(msg.getSenderRole())) msg.setReadByCustomer(true);
+            if ("ADMIN".equals(role) && "CUSTOMER".equals(msg.getSenderRole())) msg.setReadByAdmin(true);
+        }
+        requestRepository.save(req);
+    }
+
+    @Transactional
+    public void markAllAsRead(String email, String role) {
+        User user = userRepository.findByEmail(email).orElseThrow();
+        List<CustomerRequest> requests = requestRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+
+        for (CustomerRequest req : requests) {
+            for (RequestMessage msg : req.getMessages()) {
+                if ("CUSTOMER".equals(role) && "ADMIN".equals(msg.getSenderRole())) msg.setReadByCustomer(true);
+                if ("ADMIN".equals(role) && "CUSTOMER".equals(msg.getSenderRole())) msg.setReadByAdmin(true);
+            }
+            requestRepository.save(req);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -49,23 +98,28 @@ public class RequestService {
     }
 
     @Transactional
-    public RequestDto updateStatus(UUID id, String status, String adminReply) {
+    public RequestDto updateStatus(UUID id, String status) {
         // FIXED: Changed ProductRequest to CustomerRequest
         CustomerRequest req = requestRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Request not found"));
 
         req.setStatus(status);
-        req.setAdminReply(adminReply);
 
         return toDto(requestRepository.save(req));
     }
 
     private RequestDto toDto(CustomerRequest r) {
         String img = r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl();
-        return new RequestDto(
-                r.getId(), r.getUser().getFullName(), r.getUser().getEmail(),
+
+        List<MessageDto> msgs = r.getMessages().stream()
+                .map(m -> new MessageDto(m.getId(), m.getSenderRole(), m.getMessage(), m.getCreatedAt()))
+                .toList();
+
+        boolean unreadC = r.getMessages().stream().anyMatch(m -> !m.isReadByCustomer() && "ADMIN".equals(m.getSenderRole()));
+        boolean unreadA = r.getMessages().stream().anyMatch(m -> !m.isReadByAdmin() && "CUSTOMER".equals(m.getSenderRole()));
+
+        return new RequestDto(r.getId(), r.getUser().getFullName(), r.getUser().getEmail(),
                 r.getProduct().getId(), r.getProduct().getName(), img,
-                r.getMessage(), r.getStatus(), r.getAdminReply(), r.getCreatedAt()
-        );
+                r.getSize(), r.getVariantName(), r.getStatus(), msgs, unreadC, unreadA, r.getCreatedAt());
     }
 }
