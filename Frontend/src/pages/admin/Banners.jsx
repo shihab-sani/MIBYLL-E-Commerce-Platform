@@ -95,6 +95,7 @@ export default function Banners() {
                 }
             }
         }
+
         setForm({
             title: b.title || '',
             subtitle: b.subtitle || '',
@@ -108,7 +109,13 @@ export default function Banners() {
             categoryId: catId,
             subCategoryId: subId
         })
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+
+        const container = document.getElementById('admin-scroll-container');
+        if (container) {
+            container.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 
     const remove = async (b) => {

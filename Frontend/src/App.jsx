@@ -33,7 +33,16 @@ import Requests from './pages/admin/Requests'
 
 function ScrollToTop() {
     const { pathname } = useLocation()
-    useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+    useEffect(() => {
+        // Scroll the main window
+        window.scrollTo(0, 0)
+
+        // Scroll the admin panel container
+        const adminContainer = document.getElementById('admin-scroll-container');
+        if (adminContainer) {
+            adminContainer.scrollTo(0, 0);
+        }
+    }, [pathname])
     return null
 }
 
