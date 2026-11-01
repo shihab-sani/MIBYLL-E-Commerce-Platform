@@ -57,7 +57,6 @@ export default function Cart() {
             <div className="grid lg:grid-cols-[1fr_380px] gap-12">
                 <div className="divide-y divide-neutral-200">
                     {cart.items.map((item) => {
-                        // Get the correct sizes based on the item's sizeType (defaults to clothing if old item)
                         const availableSizes = getSizes(item.sizeType || 'CLOTHING')
 
                         return (
@@ -77,8 +76,22 @@ export default function Cart() {
                                             <span className="text-sm whitespace-nowrap">{formatPrice(item.lineTotal)}</span>
                                         </div>
 
-                                        {item.variantName && (
-                                            <p className="text-xs text-muted mt-1 uppercase tracking-widest2">Color: {item.variantName}</p>
+                                        {/* COLOR / DESIGN DROPDOWN */}
+                                        {item.availableVariants?.length > 0 && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-[10px] text-muted uppercase tracking-widest2">Color:</span>
+                                                <select
+                                                    value={item.variantName || ''}
+                                                    onChange={(e) => updateItem(item.id, item.quantity, item.size, e.target.value)}
+                                                    className="text-xs bg-transparent border border-neutral-300 dark:border-neutral-700 px-2 py-1 outline-none cursor-pointer hover:border-ink transition-colors uppercase tracking-wider"
+                                                >
+                                                    {item.availableVariants.map(v => (
+                                                        <option key={v.id} value={v.name} className="bg-surface text-fg">
+                                                            {v.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         )}
 
                                         {item.size && (
@@ -89,7 +102,6 @@ export default function Cart() {
                                                     onChange={(e) => updateItem(item.id, item.quantity, e.target.value, item.variantName)}
                                                     className="text-xs bg-transparent border border-neutral-300 dark:border-neutral-700 px-2 py-1 outline-none cursor-pointer hover:border-ink transition-colors"
                                                 >
-                                                    {/* USE THE DYNAMIC SIZES HERE */}
                                                     {availableSizes.map(s => (
                                                         <option key={s} value={s} className="bg-surface text-fg">{s}</option>
                                                     ))}

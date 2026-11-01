@@ -7,22 +7,34 @@ import { useAuth } from '../context/AuthContext'
 import { createPortal } from 'react-dom'
 
 // --- FEATURED IMAGE SLIDER COMPONENT ---
-function FeaturedImageSlider({ images }) {
+function FeaturedImageSlider({ images, overrideImage }) {
     const [index, setIndex] = useState(0)
     const [isHovered, setIsHovered] = useState(false)
     const timerRef = useRef(null)
 
     useEffect(() => {
-        if (!images || images.length <= 1 || isHovered) return
+        // If a specific variant image is selected, we don't need the timer
+        if (overrideImage || !images || images.length <= 1 || isHovered) return
 
         timerRef.current = setInterval(() => {
             setIndex((prev) => (prev + 1) % images.length)
-        }, 6000) // 6 seconds
+        }, 3000) // 3 seconds
 
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
         }
-    }, [images, isHovered])
+    }, [images, isHovered, overrideImage])
+
+    // If a variant is selected, show it directly with a smooth fade
+    if (overrideImage) {
+        return (
+            <img
+                src={overrideImage}
+                alt="Selected Variant"
+                className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+            />
+        )
+    }
 
     if (!images || images.length === 0) {
         return <div className="w-full h-full bg-sand" />
@@ -74,8 +86,9 @@ export default function Shop() {
 
     const [featuredProducts, setFeaturedProducts] = useState([])
 
-    // Modal State
+    // Modal & Selection State
     const [selectedProduct, setSelectedProduct] = useState(null)
+    const [productSelections, setProductSelections] = useState({})
     const [message, setMessage] = useState('')
     const [sendingRequest, setSendingRequest] = useState(false)
 
@@ -84,22 +97,33 @@ export default function Shop() {
     const sort = params.get('sort') || 'newest'
     const page = parseInt(params.get('page') || '0', 10)
 
-    useEffect(() => {
-        if (!category && !q) {
-            navigate('/', { replace: true })
-        }
-    }, [category, q, navigate])
+    // Helper to get available sizes
+    const getSizes = (type) => {
+        if (type === 'CLOTHING') return ['XS', 'S', 'M', 'L', 'XL']
+        if (type === 'SHOES') return ['38', '39', '40', '41', '42', '43', '44', '45']
+        if (type === 'RINGS') return ['5', '6', '7', '8', '9', '10', '11', '12']
+        return []
+    }
+
+    // Toggle variant selection (click same one to deselect)
+    const toggleVariant = (productId, variant) => {
+        setProductSelections(prev => {
+            const current = prev[productId] || {}
+            const isSelected = current.variant?.id === variant.id
+            return {
+                ...prev,
+                [productId]: {
+                    ...current,
+                    variant: isSelected ? null : variant
+                }
+            }
+        })
+    }
 
     useEffect(() => {
-        if (selectedProduct) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = 'unset'
-        }
-
-        return () => {
-            document.body.style.overflow = 'unset'
-        }
+        if (selectedProduct) document.body.style.overflow = 'hidden'
+        else document.body.style.overflow = 'unset'
+        return () => { document.body.style.overflow = 'unset' }
     }, [selectedProduct])
 
     useEffect(() => {
@@ -109,31 +133,25 @@ export default function Shop() {
     useEffect(() => { setSearchInput(q) }, [q])
 
     const load = useCallback(async () => {
+        if (!category && !q) {
+            setProducts([])
+            setFeaturedProducts([])
+            setTotalPages(0)
+            setLoading(false)
+            return
+        }
+
         setLoading(true)
         try {
-            // 1. Fetch Normal Products
             const prodRes = await api.get('/products', {
-                params: {
-                    category: category || undefined,
-                    q: q || undefined,
-                    sort,
-                    page,
-                    size: 12,
-                    featured: false
-                }
+                params: { category: category || undefined, q: q || undefined, sort, page, size: 12, featured: false }
             })
             setProducts(prodRes.data.content || [])
             setTotalPages(prodRes.data.page?.totalPages ?? 0)
 
-            // 2. Fetch Featured Products (by category OR search query)
             if (category || q) {
                 const featRes = await api.get('/products', {
-                    params: {
-                        category: category || undefined,
-                        q: q || undefined,
-                        featured: true,
-                        size: 20
-                    }
+                    params: { category: category || undefined, q: q || undefined, featured: true, size: 20 }
                 })
                 setFeaturedProducts(featRes.data.content || [])
             } else {
@@ -167,9 +185,17 @@ export default function Shop() {
     const submitRequest = async (e) => {
         e.preventDefault()
         if (!isAuthenticated) { toast.error('Please sign in to send a request'); return }
+
+        const selection = productSelections[selectedProduct.id] || { size: '', variant: null }
+
         setSendingRequest(true)
         try {
-            await api.post('/orders/requests', { productId: selectedProduct.id, message })
+            await api.post('/orders/requests', {
+                productId: selectedProduct.id,
+                message,
+                size: selection.size || '',
+                variantName: selection.variant?.name || ''
+            })
             toast.success('Request sent to Admin!')
             setSelectedProduct(null)
             setMessage('')
@@ -182,14 +208,13 @@ export default function Shop() {
     )
     const activeSubCategory = mainCategory?.subcategories?.find(sub => sub.slug === category)
 
-    let heading = 'All Products'
+    let heading = 'Shop'
     if (activeSubCategory) heading = activeSubCategory.name
     else if (mainCategory) heading = mainCategory.name
     else if (q) heading = `"${q}"`
 
     return (
         <div className="max-w-[1500px] mx-auto px-5 lg:px-10 pt-32 pb-12 lg:pb-16">
-
             {/* HEADER */}
             <div className="text-center mb-10">
                 <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">
@@ -201,11 +226,8 @@ export default function Shop() {
             {/* SEARCH BAR */}
             <form onSubmit={submitSearch} className="max-w-2xl mx-auto mb-12 relative">
                 <input
-                    type="text"
-                    value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
-                    placeholder="Search products by name or brand…"
-                    className="input-field pl-12 pr-28"
+                    type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)}
+                    placeholder="Search products by name or brand…" className="input-field pl-12 pr-28"
                 />
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
                      className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
@@ -215,15 +237,9 @@ export default function Shop() {
                 <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 text-[10px] uppercase tracking-widest2 bg-ink text-white hover:bg-neutral-800 dark:bg-white dark:text-ink dark:hover:bg-neutral-200">
                     Search
                 </button>
-                {q && (
-                    <button type="button" onClick={() => { setSearchInput(''); update('q', '') }}
-                            className="absolute right-28 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-widest2 text-muted hover:text-fg">
-                        Clear
-                    </button>
-                )}
             </form>
 
-            {/* FEATURED EDITORIAL SECTION (Shows if featured products exist) */}
+            {/* FEATURED EDITORIAL SECTION */}
             {featuredProducts.length > 0 && (
                 <div className="mb-24 animate-fade-in">
                     <p className="text-center text-[10px] uppercase tracking-widest2 text-[#C5A880] mb-12">
@@ -231,20 +247,62 @@ export default function Shop() {
                     </p>
                     {featuredProducts.map((product, index) => {
                         const isReverse = index % 2 !== 0
-                        return (
-                            <section key={product.id} className={`flex flex-col md:flex-row min-h-[60vh] mb-12 bg-surface ${isReverse ? 'md:flex-row-reverse' : ''}`}>
+                        const selection = productSelections[product.id] || { size: '', variant: null }
+                        const availableSizes = getSizes(product.sizeType)
 
-                                {/* SLIDER IMAGE */}
-                                <div className="w-full md:w-1/2 relative bg-sand aspect-square md:aspect-auto">
-                                    <FeaturedImageSlider images={product.images} />
+                        return (
+                            <section key={product.id} className={`flex flex-col md:flex-row h-screen min-h-[600px] mb-12 bg-surface ${isReverse ? 'md:flex-row-reverse' : ''}`}>
+
+                                {/* SLIDER IMAGE (Passes selected variant image if exists) */}
+                                <div className="w-full md:w-1/2 relative bg-sand flex-shrink-0 overflow-hidden h-[50vh] md:h-full">
+                                    <FeaturedImageSlider
+                                        images={product.images}
+                                        overrideImage={selection.variant?.imageUrl}
+                                    />
                                 </div>
 
                                 <div className="w-full md:w-1/2 flex items-center justify-center p-12 md:p-24 text-center">
-                                    <div className="max-w-md">
-                                        {/* TITLE FIRST */}
-                                        <h2 className="text-3xl md:text-5xl font-serif text-fg mb-6">{product.name}</h2>
-                                        {/* DESCRIPTION UNDER TITLE */}
-                                        <p className="text-muted text-sm leading-relaxed mb-10">{product.description}</p>
+                                    <div className="max-w-md min-w-0 w-full">
+                                        <h2 className="text-3xl md:text-5xl font-serif text-fg mb-6 break-words">{product.name}</h2>
+                                        <p className="text-muted text-sm leading-relaxed mb-8 break-words whitespace-pre-wrap">{product.description}</p>
+
+                                        {/* SIZES */}
+                                        {availableSizes.length > 0 && (
+                                            <div className="mb-6">
+                                                <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Select Size</p>
+                                                <div className="flex flex-wrap justify-center gap-2">
+                                                    {availableSizes.map(s => (
+                                                        <button
+                                                            key={s}
+                                                            onClick={() => setProductSelections(prev => ({
+                                                                ...prev, [product.id]: { ...selection, size: s }
+                                                            }))}
+                                                            className={`w-10 h-10 text-xs border transition-colors ${selection.size === s ? 'bg-fg text-surface border-fg' : 'border-c text-fg hover:border-fg'}`}
+                                                        >
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* VARIANTS */}
+                                        {product.variants?.length > 0 && (
+                                            <div className="mb-8">
+                                                <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Select Design / Color</p>
+                                                <div className="flex flex-wrap justify-center gap-3">
+                                                    {product.variants.map(v => (
+                                                        <button
+                                                            key={v.id}
+                                                            onClick={() => toggleVariant(product.id, v)}
+                                                            className={`w-16 h-16 border-2 overflow-hidden transition-all duration-300 ${selection.variant?.id === v.id ? 'border-fg scale-110 shadow-lg' : 'border-transparent hover:border-c'}`}
+                                                        >
+                                                            <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <button
                                             onClick={() => setSelectedProduct(product)}
@@ -260,44 +318,32 @@ export default function Shop() {
                 </div>
             )}
 
-            {/* FILTER BAR (Only shows if there are normal products to sort) */}
+            {/* FILTER BAR */}
             {products.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-4 border-y border-c py-4 mb-10">
                     <div className="flex flex-wrap gap-5">
                         {mainCategory ? (
                             <>
-                                <Link
-                                    to={`/shop?category=${mainCategory.slug}`}
-                                    className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1
-                                        ${!activeSubCategory && !q ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}
-                                >
+                                <Link to={`/shop?category=${mainCategory.slug}`}
+                                      className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1 ${!activeSubCategory && !q ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}>
                                     All {mainCategory.name}
                                 </Link>
-
                                 {(mainCategory.subcategories || []).map(sub => (
-                                    <button
-                                        key={sub.slug}
-                                        onClick={() => update('category', sub.slug)}
-                                        className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1
-                                            ${category === sub.slug && !q ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}
-                                    >
+                                    <button key={sub.slug} onClick={() => update('category', sub.slug)}
+                                            className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1 ${category === sub.slug && !q ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}>
                                         {sub.name}
                                     </button>
                                 ))}
                             </>
                         ) : (
-                            <>
-                                {categories.map(c => (
-                                    <button key={c.id} onClick={() => update('category', c.slug)}
-                                            className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1
-                                                ${category === c.slug ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}>
-                                        {c.name}
-                                    </button>
-                                ))}
-                            </>
+                            categories.map(c => (
+                                <button key={c.id} onClick={() => update('category', c.slug)}
+                                        className={`text-[11px] uppercase tracking-widest2 transition-colors pb-1 ${category === c.slug ? 'border-b border-fg text-fg' : 'text-muted hover:text-fg'}`}>
+                                    {c.name}
+                                </button>
+                            ))
                         )}
                     </div>
-
                     <div className="flex items-center gap-4">
                         <span className="text-[11px] uppercase tracking-widest2 text-muted">Sort</span>
                         <select value={sort} onChange={(e) => update('sort', e.target.value)}
@@ -312,7 +358,12 @@ export default function Shop() {
             )}
 
             {/* NORMAL PRODUCTS GRID */}
-            {loading ? (
+            {!category && !q ? (
+                <div className="py-32 text-center animate-fade-in">
+                    <p className="font-serif text-3xl mb-4 text-fg">Discover Mibyll</p>
+                    <p className="text-sm text-muted max-w-md mx-auto">Please select a category from the menu or use the search bar above.</p>
+                </div>
+            ) : loading ? (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-12">
                     {Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="animate-pulse">
@@ -332,24 +383,18 @@ export default function Shop() {
                     <div key={`${category}-${q}-${sort}-${page}`} className="animate-grid-in grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-12">
                         {products.map(p => <ProductCard key={p.id} product={p} />)}
                     </div>
-
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-20">
                             <button disabled={page === 0} onClick={() => update('page', String(page - 1))}
-                                    className="px-4 py-2 text-[11px] uppercase tracking-widest2 text-fg disabled:opacity-30">
-                                Prev
-                            </button>
+                                    className="px-4 py-2 text-[11px] uppercase tracking-widest2 text-fg disabled:opacity-30">Prev</button>
                             {Array.from({ length: totalPages }).map((_, i) => (
                                 <button key={i} onClick={() => update('page', String(i))}
-                                        className={`w-9 h-9 text-xs border transition-colors
-                                          ${page === i ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white' : 'border-c text-fg hover:border-fg'}`}>
+                                        className={`w-9 h-9 text-xs border transition-colors ${page === i ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white' : 'border-c text-fg hover:border-fg'}`}>
                                     {i + 1}
                                 </button>
                             ))}
                             <button disabled={page >= totalPages - 1} onClick={() => update('page', String(page + 1))}
-                                    className="px-4 py-2 text-[11px] uppercase tracking-widest2 text-fg disabled:opacity-30">
-                                Next
-                            </button>
+                                    className="px-4 py-2 text-[11px] uppercase tracking-widest2 text-fg disabled:opacity-30">Next</button>
                         </div>
                     )}
                 </>
@@ -358,18 +403,33 @@ export default function Shop() {
             {/* INQUIRY MODAL */}
             {selectedProduct && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-5">
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setSelectedProduct(null)}
-                    />
-                    <div className="relative bg-surface p-6 sm:p-8 w-full max-w-md shadow-2xl border border-c animate-fade-in">
-                        <h2 className="text-xl font-serif mb-2 text-fg">
-                            Inquire about {selectedProduct.name}
-                        </h2>
-                        <p className="text-xs text-muted mb-6">
-                            Send a message to our team regarding this piece.
-                        </p>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
+                    <div className="relative bg-surface p-6 sm:p-8 w-full max-w-md shadow-2xl border border-c animate-fade-in max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <h2 className="text-xl font-serif mb-2 text-fg">Inquire about {selectedProduct.name}</h2>
+                        <p className="text-xs text-muted mb-6">Send a message to our team regarding this piece.</p>
+
                         <form onSubmit={submitRequest}>
+                            {/* Display what was selected outside the modal */}
+                            {(productSelections[selectedProduct.id]?.size || productSelections[selectedProduct.id]?.variant) && (
+                                <div className="mb-5 p-4 border border-c bg-cbord/5 text-left flex items-center gap-4">
+                                    {productSelections[selectedProduct.id]?.variant?.imageUrl && (
+                                        <img src={productSelections[selectedProduct.id].variant.imageUrl} alt="variant" className="w-12 h-12 object-cover bg-sand shrink-0" />
+                                    )}
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-widest2 text-muted mb-1">Your Selections</p>
+                                        <div className="flex flex-wrap gap-4">
+                                            {productSelections[selectedProduct.id]?.size && (
+                                                <p className="text-sm text-fg"><span className="text-muted">Size:</span> {productSelections[selectedProduct.id].size}</p>
+                                            )}
+                                            {productSelections[selectedProduct.id]?.variant && (
+                                                <p className="text-sm text-fg"><span className="text-muted">Design:</span> {productSelections[selectedProduct.id].variant.name}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <label className="label-field text-left block">Message</label>
                             <textarea
                                 required
                                 rows="4"
@@ -378,14 +438,8 @@ export default function Shop() {
                                 placeholder="I am interested in this piece, please contact me..."
                                 className="input-field resize-none mb-4"
                             />
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedProduct(null)}
-                                    className="btn-outline"
-                                >
-                                    Cancel
-                                </button>
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button type="button" onClick={() => setSelectedProduct(null)} className="btn-outline">Cancel</button>
                                 <button type="submit" disabled={sendingRequest} className="btn-primary">
                                     {sendingRequest ? 'Sending...' : 'Send Request'}
                                 </button>

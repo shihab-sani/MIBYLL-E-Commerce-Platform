@@ -50,7 +50,13 @@ export default function Categories() {
             images: c.imageUrl ? [c.imageUrl] : [],
             parentId: c.parentId || '',
         })
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+
+        const container = document.getElementById('admin-scroll-container');
+        if (container) {
+            container.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 
     const move = async (c, direction) => {

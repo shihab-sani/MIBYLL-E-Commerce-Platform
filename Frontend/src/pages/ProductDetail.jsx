@@ -54,14 +54,6 @@ export default function ProductDetail() {
         return () => document.body.classList.remove('hide-navbar')
     }, [slug])
 
-    // Update image when a variant is selected
-    useEffect(() => {
-        if (selectedVariant && selectedVariant.imageUrl && product?.images) {
-            const idx = product.images.indexOf(selectedVariant.imageUrl)
-            if (idx !== -1) setActiveImage(idx)
-        }
-    }, [selectedVariant, product])
-
     const handleAdd = async (buyNow = false) => {
         if (!isAuthenticated) {
             toast.error('Please sign in to continue')
@@ -108,6 +100,7 @@ export default function ProductDetail() {
 
     const hasDiscount = product.discountPercent > 0
     const soldOut = product.stockQuantity === 0
+    const displayImg = selectedVariant?.imageUrl || product.images?.[activeImage];
 
     return (
         <div className="max-w-[1500px] mx-auto px-5 lg:px-10 pt-32 pb-10 lg:pb-16">
@@ -117,8 +110,16 @@ export default function ProductDetail() {
                     {product.images?.length > 1 && (
                         <div className="flex flex-col gap-3 w-20 shrink-0">
                             {product.images.map((img, i) => (
-                                <button key={i} onClick={() => setActiveImage(i)}
-                                        className={`aspect-[3/4] overflow-hidden border ${activeImage === i ? 'border-ink' : 'border-transparent'}`}>
+                                <button
+                                    key={i}
+                                    onClick={() => {
+                                        setActiveImage(i);
+                                        setSelectedVariant(null); // Clear variant if they click a normal image
+                                    }}
+                                    className={`aspect-[3/4] overflow-hidden border transition-colors ${
+                                        (!selectedVariant && activeImage === i) ? 'border-fg' : 'border-transparent'
+                                    }`}
+                                >
                                     <img src={img} alt="" className="w-full h-full object-cover" />
                                 </button>
                             ))}
@@ -126,9 +127,8 @@ export default function ProductDetail() {
                     )}
 
                     <div className="flex-1 bg-sand aspect-[3/4] overflow-hidden">
-                        {product.images?.[activeImage] ? (
-                            <img src={product.images[activeImage]} alt={product.name}
-                                 className="w-full h-full object-cover" />
+                        {displayImg ? (
+                            <img src={displayImg} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs">No image</div>
                         )}
@@ -168,7 +168,11 @@ export default function ProductDetail() {
                                         key={v.id}
                                         type="button"
                                         onClick={() => setSelectedVariant(v)}
-                                        className={`w-14 h-14 border overflow-hidden transition-colors ${selectedVariant?.id === v.id ? 'border-ink' : 'border-transparent hover:border-neutral-400'}`}
+                                        className={`w-16 h-16 border-2 overflow-hidden transition-all duration-200 ${
+                                            selectedVariant?.id === v.id
+                                                ? 'border-fg scale-105 shadow-md' // Highlight selected
+                                                : 'border-c hover:border-fg'      // Normal state
+                                        }`}
                                         title={v.name}
                                     >
                                         <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
@@ -176,8 +180,8 @@ export default function ProductDetail() {
                                 ))}
                             </div>
                             {selectedVariant && (
-                                <p className="text-xs text-muted mt-2">
-                                    Selected: <span className="text-fg">{selectedVariant.name}</span>
+                                <p className="text-xs text-muted mt-3">
+                                    Selected: <span className="text-fg font-medium">{selectedVariant.name}</span>
                                 </p>
                             )}
                         </div>
