@@ -9,9 +9,7 @@ export default function Requests() {
 
     // Modal State
     const [selectedReq, setSelectedReq] = useState(null)
-    const [status, setStatus] = useState('PENDING')
     const [reply, setReply] = useState('')
-    const [saving, setSaving] = useState(false)
 
     const load = () => {
         setLoading(true)
@@ -25,25 +23,13 @@ export default function Requests() {
 
     const openManageModal = (req) => {
         setSelectedReq(req)
-        setStatus(req.status || 'PENDING')
-        setReply(req.adminReply || '')
-    }
+        setReply('') // Just clear it
 
-    const handleSave = async (e) => {
-        e.preventDefault()
-        setSaving(true)
-        try {
-            await api.patch(`/admin/requests/${selectedReq.id}/status`, {
-                status,
-                adminReply: reply
+        // Mark as read when opening
+        if (req.hasUnreadAdmin) {
+            api.patch(`/admin/requests/${req.id}/read`).then(() => {
+                setRequests(prev => prev.map(r => r.id === req.id ? { ...r, hasUnreadAdmin: false } : r))
             })
-            toast.success('Inquiry updated')
-            setSelectedReq(null)
-            load()
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to update')
-        } finally {
-            setSaving(false)
         }
     }
 
@@ -90,11 +76,21 @@ export default function Requests() {
                                         {req.productImage && (
                                             <img src={req.productImage} alt="" className="w-8 h-10 object-cover bg-sand" />
                                         )}
-                                        <span className="text-fg">{req.productName}</span>
+                                        <div>
+                                            <span className="text-fg block">{req.productName}</span>
+                                            {/* NEW: Show requested size/variant */}
+                                            {(req.size || req.variantName) && (
+                                                <span className="text-[10px] text-muted uppercase tracking-widest2">
+                                                    {req.size && `Size: ${req.size}`}
+                                                    {req.size && req.variantName && ' | '}
+                                                    {req.variantName && `Color: ${req.variantName}`}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-xs text-fg max-w-[200px] truncate" title={req.message}>
-                                    {req.message}
+                                <td className="px-6 py-4 text-xs text-fg max-w-[200px] truncate" title={req.messages?.[0]?.message}>
+                                    {req.messages?.[0]?.message || 'No messages'}
                                 </td>
                                 <td className="px-6 py-4">
                                         <span className={`text-[9px] uppercase tracking-widest2 px-2 py-1 border ${
@@ -125,44 +121,66 @@ export default function Requests() {
                         <h2 className="text-xl font-serif text-fg mb-6">Manage Inquiry</h2>
 
                         <div className="mb-6 p-4 border border-c bg-cbord/5">
-                            <p className="text-xs text-muted mb-1">Message from {selectedReq.customerName}:</p>
-                            <p className="text-sm text-fg italic">"{selectedReq.message}"</p>
+                            {/* DELETED: selectedReq.message line */}
+                            <p className="text-xs text-muted mb-1">Inquiry from {selectedReq.customerName}</p>
+
+                            {/* Show selected options in modal */}
+                            {(selectedReq.size || selectedReq.variantName) && (
+                                <div className="flex gap-4 pt-3 border-t border-c">
+                                    {selectedReq.size && (
+                                        <p className="text-xs text-fg"><strong className="text-muted">Size:</strong> {selectedReq.size}</p>
+                                    )}
+                                    {selectedReq.variantName && (
+                                        <p className="text-xs text-fg"><strong className="text-muted">Color:</strong> {selectedReq.variantName}</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        <form onSubmit={handleSave} className="space-y-4">
-                            <div>
-                                <label className="label-field">Update Status</label>
-                                <select
-                                    value={status}
-                                    onChange={e => setStatus(e.target.value)}
-                                    className="input-field"
-                                >
-                                    <option value="PENDING">Pending</option>
-                                    <option value="REPLIED">Replied</option>
-                                    <option value="CLOSED">Closed</option>
-                                </select>
-                            </div>
+                        {/* CHAT HISTORY */}
+                        <div className="mb-6 max-h-[300px] overflow-y-auto custom-scrollbar p-4 border border-c bg-cbord/5 flex flex-col gap-3">
+                            {selectedReq.messages?.map(msg => (
+                                <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'ADMIN' ? 'items-end' : 'items-start'}`}>
+                                    <span className="text-[9px] text-muted mb-1">{msg.senderRole === 'ADMIN' ? 'You (Admin)' : selectedReq.customerName}</span>
+                                    <div className={`px-4 py-2 max-w-[85%] text-sm ${msg.senderRole === 'ADMIN' ? 'bg-ink text-white' : 'bg-surface border border-c text-fg'}`}>
+                                        {msg.message}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
 
-                            <div>
-                                <label className="label-field">Admin Reply (Optional)</label>
-                                <textarea
-                                    rows="4"
-                                    value={reply}
-                                    onChange={e => setReply(e.target.value)}
-                                    placeholder="Type your response to the customer here..."
-                                    className="input-field resize-none"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setSelectedReq(null)} className="btn-outline">
-                                    Cancel
-                                </button>
-                                <button type="submit" disabled={saving} className="btn-primary">
-                                    {saving ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </form>
+                        {/* REPLY FORM */}
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Type your reply to the customer..."
+                                className="input-field flex-1"
+                                value={reply}
+                                onChange={(e) => setReply(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && reply.trim()) {
+                                        api.post(`/admin/requests/${selectedReq.id}/reply`, { message: reply }).then(() => {
+                                            toast.success('Reply sent');
+                                            setSelectedReq(null);
+                                            load();
+                                        });
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    if (!reply.trim()) return;
+                                    api.post(`/admin/requests/${selectedReq.id}/reply`, { message: reply }).then(() => {
+                                        toast.success('Reply sent');
+                                        setSelectedReq(null);
+                                        load();
+                                    });
+                                }}
+                                className="btn-primary px-6"
+                            >
+                                Send
+                            </button>
+                        </div>
                     </div>
                 </div>,
                 document.body

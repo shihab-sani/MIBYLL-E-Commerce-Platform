@@ -20,11 +20,11 @@ const TABS = [
     { key: 'ONGOING',   label: 'Ongoing' },
     { key: 'DELIVERED', label: 'Delivered' },
     { key: 'CANCELLED', label: 'Cancelled' },
-    { key: 'INQUIRIES', label: 'My Inquiries' }, // <-- NEW TAB
+    { key: 'INQUIRIES', label: 'My Inquiries' },
 ]
 
 export default function MyOrders() {
-    const { cart } = useCart()
+    const { cart, updateItem, removeItem } = useCart()
     const { formatPrice } = useLocalization()
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
@@ -33,11 +33,19 @@ export default function MyOrders() {
     // Inquiries State
     const [inquiries, setInquiries] = useState([])
     const [loadingInquiries, setLoadingInquiries] = useState(true)
+    const [replyTexts, setReplyTexts] = useState({})
 
     // Refund Modal State
     const [refundModal, setRefundModal] = useState(null)
     const [refundReason, setRefundReason] = useState('')
     const [submittingRefund, setSubmittingRefund] = useState(false)
+
+    const loadInquiries = () => {
+        api.get('/orders/requests')
+            .then(r => setInquiries(r.data))
+            .catch(() => {})
+            .finally(() => setLoadingInquiries(false))
+    }
 
     const load = () => {
         setLoading(true)
@@ -49,12 +57,7 @@ export default function MyOrders() {
 
     useEffect(() => {
         load()
-
-        // Fetch User Inquiries (Adjust the URL if your endpoint is different)
-        api.get('/orders/requests')
-            .then(r => setInquiries(r.data))
-            .catch(() => {})
-            .finally(() => setLoadingInquiries(false))
+        loadInquiries()
     }, [])
 
     const handleCancel = async (orderId) => {
@@ -94,19 +97,155 @@ export default function MyOrders() {
         }
     }
 
-    const filtered = orders.filter(o => {
-        if (tab === 'ALL' || tab === 'CART' || tab === 'INQUIRIES') return true
-        if (tab === 'ONGOING')   return ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status)
-        if (tab === 'DELIVERED') return o.status === 'DELIVERED'
-        if (tab === 'CANCELLED') return o.status === 'CANCELLED'
-        return true
-    })
-
     const isRefundExpired = (deliveredAt) => {
         if (!deliveredAt) return false;
         const days = (new Date() - new Date(deliveredAt)) / (1000 * 60 * 60 * 24);
         return days >= 2;
     }
+
+    // --- GROUPED DATA FOR 'ALL' TAB ---
+    const ongoingOrders = orders.filter(o => ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status))
+    const deliveredOrders = orders.filter(o => o.status === 'DELIVERED')
+    const cancelledOrders = orders.filter(o => o.status === 'CANCELLED')
+    const unreadCount = inquiries.filter(i => i.hasUnreadCustomer).length;
+
+    // --- REUSABLE UI COMPONENTS ---
+    const CartItemCard = ({ item }) => (
+        <div className="card p-4 flex gap-4 items-center mb-4">
+            <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
+                {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
+            </div>
+            <div className="flex-1 text-sm">
+                <Link to={`/product/${item.slug}`} className="text-fg hover:underline">
+                    {item.productName}
+                </Link>
+                <p className="text-xs text-muted mt-1">
+                    {item.variantName && `Color: ${item.variantName} · `}
+                    {item.size && `Size ${item.size} · `}Qty {item.quantity} · {formatPrice(item.unitPrice)}
+                </p>
+            </div>
+            <span className="text-sm text-fg">{formatPrice(item.lineTotal)}</span>
+        </div>
+    )
+
+    const OrderCard = ({ order }) => (
+        <div className="card mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-c">
+                <div>
+                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Order</p>
+                    <p className="text-sm font-medium text-fg mt-1">{order.orderNumber}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Date</p>
+                    <p className="text-sm text-fg mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Total</p>
+                    <p className="text-sm text-fg mt-1">৳ {order.totalAmount}</p>
+                </div>
+                <div className="flex gap-2">
+                    <span className={`text-[10px] uppercase tracking-widest2 px-3 py-1.5 ${STATUS_STYLES[order.status]}`}>
+                        {order.status}
+                    </span>
+                    {order.refundApproved && (
+                        <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                            Refund Approved
+                        </span>
+                    )}
+                    {order.refundRejected && (
+                        <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700">
+                            Refund Rejected
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+                {order.items.map(item => (
+                    <div key={item.id} className="flex gap-4">
+                        <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
+                            {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
+                        </div>
+                        <div className="flex-1 text-sm">
+                            <p className="text-fg">{item.productName}</p>
+                            <p className="text-xs text-muted mt-1">
+                                {item.size && `Size ${item.size} · `}Qty {item.quantity} · ৳ {item.unitPrice}
+                            </p>
+                        </div>
+                        <span className="text-sm text-fg">৳ {item.subtotal}</span>
+                    </div>
+                ))}
+            </div>
+
+            <div className="px-6 pb-6 flex flex-wrap items-end justify-between gap-4">
+                <div className="text-xs text-muted">
+                    <p><span className="uppercase tracking-widest2 text-[10px]">Ship to:</span> <span className="text-fg">{order.shippingAddress}</span></p>
+                    <p className="mt-1"><span className="uppercase tracking-widest2 text-[10px]">Phone:</span> <span className="text-fg">{order.phone}</span></p>
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                    {order.refundRejected && !order.refundRequested && (
+                        <p className="text-xs text-red-400 text-right mb-2 max-w-xs">
+                            <span className="font-bold uppercase tracking-widest text-[9px] block mb-1">Rejection Reason:</span>
+                            {order.refundRejectionReason}
+                        </p>
+                    )}
+
+                    <div className="flex gap-3">
+                        {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                            <button onClick={() => handleCancel(order.id)} className="btn-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
+                                Cancel Order
+                            </button>
+                        )}
+
+                        {order.status === 'DELIVERED' && (
+                            order.refundApproved ? (
+                                <span className="btn-outline border-green-500 text-green-500 disabled:opacity-100">
+                                    Refund Approved
+                                </span>
+                            ) : order.refundRequested ? (
+                                <button onClick={() => handleCancelRefund(order.id)} className="btn-outline border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white">
+                                    Cancel Refund Request
+                                </button>
+                            ) : (
+                                <button
+                                    disabled={isRefundExpired(order.deliveredAt)}
+                                    onClick={() => setRefundModal({ orderId: order.id })}
+                                    className={`btn-outline disabled:opacity-50 disabled:cursor-not-allowed ${order.refundRejected ? 'border-red-500 text-red-500' : ''}`}
+                                >
+                                    {isRefundExpired(order.deliveredAt) ? 'Refund Expired' : order.refundRejected ? 'Request Refund Again' : 'Request Refund'}
+                                </button>
+                            )
+                        )}
+                    </div>
+                </div>
+                {order.refundLogs && order.refundLogs.length > 0 && (
+                    <div className="w-full mt-6 pt-6 border-t border-c">
+                        <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
+                        <div className="space-y-3">
+                            {order.refundLogs.map(log => (
+                                <div key={log.id} className="flex flex-col sm:flex-row sm:gap-3 text-xs">
+                                    <div className="w-24 shrink-0 text-muted">
+                                        {new Date(log.createdAt).toLocaleDateString()}
+                                    </div>
+                                    <div>
+                                        <span className={`font-bold uppercase tracking-wider text-[9px] mr-2 ${
+                                            log.action === 'REJECTED' ? 'text-red-500' :
+                                                log.action === 'APPROVED' ? 'text-green-500' :
+                                                    log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
+                                        }`}>
+                                            [{log.action}]
+                                        </span>
+                                        <span className="text-fg">{log.reason}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
 
     return (
         <div className="max-w-[1100px] mx-auto px-5 lg:px-10 py-12 lg:py-16">
@@ -115,69 +254,156 @@ export default function MyOrders() {
             {/* TABS */}
             <div className="flex flex-wrap gap-2 mb-10 border-b border-c pb-4">
                 {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)}
-                            className={`px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors
-                        ${tab === t.key ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white' : 'text-fg border-c hover:border-fg'}`}>
+                    <button key={t.key} onClick={() => {
+                        setTab(t.key);
+                        if (t.key === 'INQUIRIES' && unreadCount > 0) {
+                            // Call the new endpoint we will create in the backend
+                            api.patch('/orders/requests/read-all').then(() => {
+                                setInquiries(prev => prev.map(i => ({ ...i, hasUnreadCustomer: false })));
+                            });
+                        }
+                    }}
+                            className={`relative px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors 
+                            ${tab === t.key ? 'bg-ink text-white border-ink' : 'text-fg border-c hover:border-fg'}`}>
                         {t.label}
+                        {t.key === 'INQUIRIES' && unreadCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
 
-            {/* --- MY INQUIRIES TAB --- */}
-            {tab === 'INQUIRIES' && (
-                loadingInquiries ? (
-                    <div className="py-20 text-center text-sm text-muted">Loading inquiries…</div>
-                ) : inquiries.length === 0 ? (
-                    <div className="py-24 text-center">
-                        <p className="text-sm text-muted mb-8">You haven't sent any inquiries yet.</p>
-                        <Link to="/shop" className="btn-primary">Browse Products</Link>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {inquiries.map((inquiry) => (
-                            <div key={inquiry.id} className="card p-6 flex flex-col md:flex-row md:items-start justify-between gap-6">
-                                <div className="flex items-start gap-4">
-                                    {inquiry.productImage && (
-                                        <img
-                                            src={inquiry.productImage}
-                                            alt={inquiry.productName}
-                                            className="w-16 h-20 object-cover bg-sand mt-1"
-                                        />
-                                    )}
-                                    <div>
-                                        <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
-                                        <p className="text-xs text-muted mt-1 italic max-w-md">"{inquiry.message}"</p>
-
-                                        {inquiry.adminReply && (
-                                            <div className="mt-4 p-3 border-l-2 border-[#C5A880] bg-[#C5A880]/5">
-                                                <p className="text-[10px] uppercase tracking-widest2 text-[#C5A880] mb-1">
-                                                    Admin Reply
-                                                </p>
-                                                <p className="text-xs text-fg">{inquiry.adminReply}</p>
-                                            </div>
-                                        )}
+            {/* --- ALL TAB (DARAZ STYLE) --- */}
+            {tab === 'ALL' && (
+                <div className="space-y-12">
+                    {loading ? (
+                        <div className="py-20 text-center text-sm text-muted">Loading...</div>
+                    ) : (
+                        <>
+                            {/* CART ITEMS */}
+                            {cart?.items?.length > 0 && (
+                                <section>
+                                    <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">In Cart</h2>
+                                    {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
+                                    <div className="pt-2">
+                                        <Link to="/cart" className="btn-primary">Go to Cart</Link>
                                     </div>
-                                </div>
+                                </section>
+                            )}
 
-                                <div className="text-left md:text-right shrink-0">
-                                    <span className={`inline-block text-[9px] uppercase tracking-widest2 px-3 py-1 border ${
-                                        inquiry.status === 'PENDING' ? 'border-amber-500 text-amber-500' :
-                                            inquiry.status === 'REPLIED' ? 'border-green-500 text-green-500' :
-                                                'border-gray-500 text-gray-400'
-                                    }`}>
-                                        {inquiry.status || 'Pending'}
-                                    </span>
-                                    <p className="text-[10px] text-muted mt-2">
-                                        {new Date(inquiry.createdAt).toLocaleDateString()}
-                                    </p>
+                            {/* ONGOING ORDERS */}
+                            {ongoingOrders.length > 0 && (
+                                <section>
+                                    <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Ongoing Orders</h2>
+                                    {ongoingOrders.map(order => <OrderCard key={order.id} order={order} />)}
+                                </section>
+                            )}
+
+                            {/* DELIVERED ORDERS */}
+                            {deliveredOrders.length > 0 && (
+                                <section>
+                                    <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Delivered Orders</h2>
+                                    {deliveredOrders.map(order => <OrderCard key={order.id} order={order} />)}
+                                </section>
+                            )}
+
+                            {/* CANCELLED ORDERS */}
+                            {cancelledOrders.length > 0 && (
+                                <section>
+                                    <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Cancelled Orders</h2>
+                                    {cancelledOrders.map(order => <OrderCard key={order.id} order={order} />)}
+                                </section>
+                            )}
+
+                            {/* IF EVERYTHING IS EMPTY */}
+                            {cart?.items?.length === 0 && orders.length === 0 && (
+                                <div className="py-24 text-center">
+                                    <p className="text-sm text-muted mb-8">You have no recent activity.</p>
+                                    <Link to="/shop" className="btn-primary">Start Shopping</Link>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )
+                            )}
+                        </>
+                    )}
+                </div>
             )}
 
-            {/* --- CART TAB --- */}
+            {/* --- INQUIRIES TAB --- */}
+            {tab === 'INQUIRIES' && (
+                <div className="space-y-6">
+                    {inquiries.map((inquiry) => (
+                        <div key={inquiry.id} className="card p-6 flex flex-col gap-4">
+
+                            {/* Header */}
+                            <div className="flex justify-between items-start border-b border-c pb-4">
+                                <div className="flex items-center gap-4">
+                                    {inquiry.productImage && <img src={inquiry.productImage} alt="" className="w-12 h-16 object-cover bg-sand" />}
+                                    <div>
+                                        <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
+                                        <p className="text-[10px] uppercase text-muted">
+                                            {inquiry.size && `Size: ${inquiry.size} | `}
+                                            {inquiry.variantName && `Design: ${inquiry.variantName}`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className={`text-[9px] uppercase tracking-widest2 px-3 py-1 border ${inquiry.status === 'PENDING' ? 'border-amber-500 text-amber-500' : 'border-green-500 text-green-500'}`}>
+                                    {inquiry.status}
+                                </span>
+                            </div>
+
+                            {/* Chat History */}
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar p-2">
+                                {inquiry.messages.map((msg) => (
+                                    <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'CUSTOMER' ? 'items-end' : 'items-start'}`}>
+                                        <span className="text-[9px] text-muted mb-1">{msg.senderRole === 'CUSTOMER' ? 'You' : 'Mibyll Support'}</span>
+                                        <div className={`px-4 py-2 max-w-[80%] text-sm ${msg.senderRole === 'CUSTOMER' ? 'bg-ink text-white' : 'bg-cbord/20 text-fg'}`}>
+                                            {msg.message}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Reply Box */}
+                            <div className="flex gap-2 pt-4 border-t border-c">
+                                <input
+                                    type="text"
+                                    placeholder="Type a message..."
+                                    className="input-field flex-1"
+                                    value={replyTexts[inquiry.id] || ''}  // <-- Target specific ID
+                                    onChange={(e) => setReplyTexts(prev => ({ ...prev, [inquiry.id]: e.target.value }))} // <-- Update specific ID
+                                    onKeyDown={(e) => {
+                                        const text = replyTexts[inquiry.id];
+                                        if (e.key === 'Enter' && text?.trim()) {
+                                            api.post(`/orders/requests/${inquiry.id}/reply`, { message: text }).then(() => {
+                                                setReplyTexts(prev => ({ ...prev, [inquiry.id]: '' })); // <-- Clear specific ID
+                                                toast.success('Message sent');
+                                                loadInquiries();
+                                            });
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        const text = replyTexts[inquiry.id];
+                                        if (!text?.trim()) return;
+                                        api.post(`/orders/requests/${inquiry.id}/reply`, { message: text }).then(() => {
+                                            setReplyTexts(prev => ({ ...prev, [inquiry.id]: '' }));
+                                            toast.success('Message sent');
+                                            loadInquiries();
+                                        });
+                                    }}
+                                    className="btn-primary px-6"
+                                >
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* --- CART TAB (ONLY CART) --- */}
             {tab === 'CART' && (
                 cart?.items?.length === 0 ? (
                     <div className="py-20 text-center">
@@ -185,164 +411,40 @@ export default function MyOrders() {
                         <Link to="/shop" className="btn-primary">Browse Products</Link>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div>
                         <p className="text-xs text-muted mb-4">
                             Items currently in your cart — {cart.items.length} item(s), subtotal {formatPrice(cart.subtotal)}
                         </p>
-                        {cart.items.map(item => (
-                            <div key={item.id} className="card p-4 flex gap-4 items-center">
-                                <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
-                                    {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
-                                </div>
-                                <div className="flex-1 text-sm">
-                                    <Link to={`/product/${item.slug}`} className="text-fg hover:underline">
-                                        {item.productName}
-                                    </Link>
-                                    <p className="text-xs text-muted mt-1">
-                                        {item.variantName && `Color: ${item.variantName} · `}
-                                        {item.size && `Size ${item.size} · `}Qty {item.quantity} · {formatPrice(item.unitPrice)}
-                                    </p>
-                                </div>
-                                <span className="text-sm text-fg">{formatPrice(item.lineTotal)}</span>
-                            </div>
-                        ))}
-                        <div className="pt-4">
+                        {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
+                        <div className="pt-4 mt-6 border-t border-c">
                             <Link to="/cart" className="btn-primary">Go to Cart</Link>
                         </div>
                     </div>
                 )
             )}
 
-            {/* --- ORDERS TABS --- */}
-            {tab !== 'CART' && tab !== 'INQUIRIES' && (
+            {/* --- SPECIFIC ORDER TABS (ONGOING, DELIVERED, CANCELLED) --- */}
+            {['ONGOING', 'DELIVERED', 'CANCELLED'].includes(tab) && (
                 loading ? (
                     <div className="py-20 text-center text-sm text-muted">Loading orders…</div>
-                ) : filtered.length === 0 ? (
-                    <div className="py-24 text-center">
-                        <p className="text-sm text-muted mb-8">No orders in this view.</p>
-                        <Link to="/shop" className="btn-primary">Start Shopping</Link>
-                    </div>
                 ) : (
-                    <div className="space-y-6">
-                        {filtered.map(order => (
-                            <div key={order.id} className="card">
-                                <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-c">
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Order</p>
-                                        <p className="text-sm font-medium text-fg mt-1">{order.orderNumber}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Date</p>
-                                        <p className="text-sm text-fg mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Total</p>
-                                        <p className="text-sm text-fg mt-1">৳ {order.totalAmount}</p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <span className={`text-[10px] uppercase tracking-widest2 px-3 py-1.5 ${STATUS_STYLES[order.status]}`}>
-                                            {order.status}
-                                        </span>
-                                        {order.refundApproved && (
-                                            <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
-                                                Refund Approved
-                                            </span>
-                                        )}
-                                        {order.refundRejected && (
-                                            <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700">
-                                                Refund Rejected
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                    (() => {
+                        let filtered = orders
+                        if (tab === 'ONGOING') filtered = ongoingOrders
+                        if (tab === 'DELIVERED') filtered = deliveredOrders
+                        if (tab === 'CANCELLED') filtered = cancelledOrders
 
-                                <div className="p-6 space-y-4">
-                                    {order.items.map(item => (
-                                        <div key={item.id} className="flex gap-4">
-                                            <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
-                                                {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
-                                            </div>
-                                            <div className="flex-1 text-sm">
-                                                <p className="text-fg">{item.productName}</p>
-                                                <p className="text-xs text-muted mt-1">
-                                                    {item.size && `Size ${item.size} · `}Qty {item.quantity} · ৳ {item.unitPrice}
-                                                </p>
-                                            </div>
-                                            <span className="text-sm text-fg">৳ {item.subtotal}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="px-6 pb-6 flex flex-wrap items-end justify-between gap-4">
-                                    <div className="text-xs text-muted">
-                                        <p><span className="uppercase tracking-widest2 text-[10px]">Ship to:</span> <span className="text-fg">{order.shippingAddress}</span></p>
-                                        <p className="mt-1"><span className="uppercase tracking-widest2 text-[10px]">Phone:</span> <span className="text-fg">{order.phone}</span></p>
-                                    </div>
-
-                                    <div className="flex flex-col items-end gap-2">
-                                        {order.refundRejected && !order.refundRequested && (
-                                            <p className="text-xs text-red-400 text-right mb-2 max-w-xs">
-                                                <span className="font-bold uppercase tracking-widest text-[9px] block mb-1">Rejection Reason:</span>
-                                                {order.refundRejectionReason}
-                                            </p>
-                                        )}
-
-                                        <div className="flex gap-3">
-                                            {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
-                                                <button onClick={() => handleCancel(order.id)} className="btn-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
-                                                    Cancel Order
-                                                </button>
-                                            )}
-
-                                            {order.status === 'DELIVERED' && (
-                                                order.refundApproved ? (
-                                                    <span className="btn-outline border-green-500 text-green-500 disabled:opacity-100">
-                                                        Refund Approved
-                                                    </span>
-                                                ) : order.refundRequested ? (
-                                                    <button onClick={() => handleCancelRefund(order.id)} className="btn-outline border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white">
-                                                        Cancel Refund Request
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        disabled={isRefundExpired(order.deliveredAt)}
-                                                        onClick={() => setRefundModal({ orderId: order.id })}
-                                                        className={`btn-outline disabled:opacity-50 disabled:cursor-not-allowed ${order.refundRejected ? 'border-red-500 text-red-500' : ''}`}
-                                                    >
-                                                        {isRefundExpired(order.deliveredAt) ? 'Refund Expired' : order.refundRejected ? 'Request Refund Again' : 'Request Refund'}
-                                                    </button>
-                                                )
-                                            )}
-                                        </div>
-                                    </div>
-                                    {order.refundLogs && order.refundLogs.length > 0 && (
-                                        <div className="w-full mt-6 pt-6 border-t border-c">
-                                            <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
-                                            <div className="space-y-3">
-                                                {order.refundLogs.map(log => (
-                                                    <div key={log.id} className="flex flex-col sm:flex-row sm:gap-3 text-xs">
-                                                        <div className="w-24 shrink-0 text-muted">
-                                                            {new Date(log.createdAt).toLocaleDateString()}
-                                                        </div>
-                                                        <div>
-                                                            <span className={`font-bold uppercase tracking-wider text-[9px] mr-2 ${
-                                                                log.action === 'REJECTED' ? 'text-red-500' :
-                                                                    log.action === 'APPROVED' ? 'text-green-500' :
-                                                                        log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
-                                                            }`}>
-                                                                [{log.action}]
-                                                            </span>
-                                                            <span className="text-fg">{log.reason}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                        return filtered.length === 0 ? (
+                            <div className="py-24 text-center">
+                                <p className="text-sm text-muted mb-8">No orders in this view.</p>
+                                <Link to="/shop" className="btn-primary">Start Shopping</Link>
                             </div>
-                        ))}
-                    </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {filtered.map(order => <OrderCard key={order.id} order={order} />)}
+                            </div>
+                        )
+                    })()
                 )
             )}
 

@@ -1,7 +1,11 @@
 import { NavLink, Outlet, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useLocation } from 'react-router-dom'
+import api from '../../api/axios'
+
+// ... existing code ...
 
 const nav = [
     { to: '/admin', label: 'Dashboard', end: true },
@@ -22,6 +26,16 @@ export default function AdminLayout() {
     const { user, isAdmin } = useAuth()
     const visibleNav = nav.filter(item => !item.adminOnly || isAdmin)
     const location = useLocation()
+    const [unreadRequestsCount, setUnreadRequestsCount] = useState(0)
+
+    useEffect(() => {
+        api.get('/admin/requests')
+            .then(r => {
+                const unreadCount = r.data.filter(req => req.hasUnreadAdmin === true).length
+                setUnreadRequestsCount(unreadCount)
+            })
+            .catch(() => setUnreadRequestsCount(0))
+    }, [])
 
     return (
         <div className="flex h-screen bg-surface overflow-hidden" style={{ background: 'rgb(var(--paper))' }}>
@@ -37,9 +51,14 @@ export default function AdminLayout() {
                     {visibleNav.map(item => (
                         <NavLink key={item.to} to={item.to} end={item.end}
                                  className={({ isActive }) =>
-                                     `block px-4 py-3 text-[11px] uppercase tracking-widest2 transition-colors
+                                     `flex items-center px-4 py-3 text-[11px] uppercase tracking-widest2 transition-colors
                         ${isActive ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}>
-                            {item.label}
+                            <span>{item.label}</span>
+                            {item.to === '/admin/requests' && unreadRequestsCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
+                                    {unreadRequestsCount}
+                                </span>
+                            )}
                         </NavLink>
                     ))}
                 </nav>
@@ -58,7 +77,7 @@ export default function AdminLayout() {
 
             {/* MAIN */}
             {/* Added h-full and overflow-y-auto here so the main content can scroll */}
-            <div className="flex-1 lg:ml-60 h-full overflow-y-auto">
+            <div id="admin-scroll-container" className="flex-1 lg:ml-60 h-full overflow-y-auto">
                 <div className="lg:hidden bg-ink text-white px-5 py-4 flex items-center justify-between shrink-0">
                     <span className="font-serif tracking-[0.3em] uppercase text-sm">Mibyll Admin</span>
                     <div className="flex items-center gap-5">
@@ -74,7 +93,12 @@ export default function AdminLayout() {
                                      className={({ isActive }) =>
                                          `whitespace-nowrap px-5 py-4 text-[10px] uppercase tracking-widest2 border-b-2
                           ${isActive ? 'border-fg text-fg' : 'border-transparent text-muted'}`}>
-                                {item.label}
+                                <span>{item.label}</span>
+                                {item.to === '/admin/requests' && unreadRequestsCount > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-2">
+                                        {unreadRequestsCount}
+                                    </span>
+                                )}
                             </NavLink>
                         ))}
                     </div>
