@@ -11,7 +11,7 @@ public class CartDtos {
     public record CartItemDto(
             UUID id, UUID productId, String productName, String slug, String imageUrl,
             BigDecimal unitPrice, Integer quantity, String size, BigDecimal lineTotal,
-            Integer stockQuantity, String variantName, String sizeType
+            Integer stockQuantity, String variantName, String sizeType, List<ProductDtos.VariantDto> availableVariants
     ) {}
 
     public record CartDto(UUID id, List<CartItemDto> items, BigDecimal subtotal,

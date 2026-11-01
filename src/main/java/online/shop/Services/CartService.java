@@ -2,6 +2,7 @@ package online.shop.Services;
 
 import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.CartDtos.*;
+import online.shop.DTOs.ProductDtos.*;
 import online.shop.Entity.Cart;
 import online.shop.Entity.CartItem;
 import online.shop.Entity.Product;
@@ -25,11 +26,6 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
-
-    /* ------------------------------------------------------------- */
-    /* Public API now takes the authenticated user's EMAIL            */
-    /* so the User entity is loaded inside the transaction.           */
-    /* ------------------------------------------------------------- */
 
     @Transactional
     public CartDto getCart(String email) {
@@ -92,7 +88,9 @@ public class CartService {
         String targetSize = (newSize == null || newSize.isBlank()) ? item.getSize() : newSize;
         String targetVariant = (newVariant == null || newVariant.isBlank()) ? item.getVariantName() : newVariant;
 
-        if (!targetSize.equals(item.getSize())) {
+        boolean isChanging = !targetSize.equals(item.getSize()) || !targetVariant.equals(item.getVariantName());
+
+        if (isChanging) {
             CartItem existing = cartItemRepository
                     .findByCartIdAndProductIdAndSizeAndVariantName(cart.getId(), item.getProduct().getId(), targetSize, targetVariant)
                     .orElse(null);
@@ -133,14 +131,11 @@ public class CartService {
         cartRepository.save(cart);
     }
 
-    /** Used by OrderService — must be called inside an existing transaction. */
     @Transactional
     public Cart getOrCreateCart(User user) {
         return cartRepository.findByUserId(user.getId())
                 .orElseGet(() -> cartRepository.save(Cart.builder().user(user).build()));
     }
-
-    /* -------------------------- helpers -------------------------- */
 
     private User loadUser(String email) {
         return userRepository.findByEmail(email)
@@ -148,21 +143,42 @@ public class CartService {
     }
 
     public CartDto toDto(Cart cart) {
-        List<CartItemDto> items = cart.getItems().stream().map(i -> new CartItemDto(
-                i.getId(),
-                i.getProduct().getId(),
-                i.getProduct().getName(),
-                i.getProduct().getSlug(),
-                i.getProduct().getImages().isEmpty() ? null
-                        : i.getProduct().getImages().get(0).getImageUrl(),
-                i.getProduct().getFinalPrice(),
-                i.getQuantity(),
-                i.getSize(),
-                i.getLineTotal(),
-                i.getProduct().getStockQuantity(),
-                i.getVariantName(),
-                i.getProduct().getSizeType()
-        )).toList();
+        List<CartItemDto> items = cart.getItems().stream().map(i -> {
+
+            // Find the image URL for the selected variant
+            String imgUrl = null;
+            if (i.getVariantName() != null && !i.getVariantName().isBlank()) {
+                imgUrl = i.getProduct().getVariants().stream()
+                        .filter(v -> v.getName().equalsIgnoreCase(i.getVariantName()))
+                        .map(online.shop.Entity.ProductVariant::getImageUrl)
+                        .filter(url -> url != null && !url.isBlank())
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            if (imgUrl == null) {
+                imgUrl = i.getProduct().getImages().isEmpty() ? null : i.getProduct().getImages().get(0).getImageUrl();
+            }
+
+            return new CartItemDto(
+                    i.getId(),
+                    i.getProduct().getId(),
+                    i.getProduct().getName(),
+                    i.getProduct().getSlug(),
+                    imgUrl,
+                    i.getProduct().getFinalPrice(),
+                    i.getQuantity(),
+                    i.getSize(),
+                    i.getLineTotal(),
+                    i.getProduct().getStockQuantity(),
+                    i.getVariantName(),
+                    i.getProduct().getSizeType(),
+                    // FIX: Convert Entity to DTO here
+                    i.getProduct().getVariants().stream()
+                            .map(v -> new VariantDto(v.getId(), v.getName(), v.getImageUrl()))
+                            .toList()
+            );
+        }).toList();
 
         BigDecimal subtotal = items.stream()
                 .map(CartItemDto::lineTotal)
