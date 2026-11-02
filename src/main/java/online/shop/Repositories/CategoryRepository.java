@@ -27,10 +27,10 @@ public interface CategoryRepository extends JpaRepository<Categories, UUID> {
     @Query("""
         SELECT c FROM Categories c
         WHERE c.parent IS NULL
-        AND EXISTS (
-            SELECT p FROM Product p
-            JOIN p.category pc
-            WHERE (pc = c OR pc.parent = c) AND p.featured = false
+        AND (
+            (SELECT COUNT(p) FROM Product p WHERE p.category = c OR p.category.parent = c) = 0
+            OR
+            (SELECT COUNT(p) FROM Product p WHERE (p.category = c OR p.category.parent = c) AND p.featured = false) > 0
         )
     """)
     List<Categories> findCategoriesWithNormalProducts();
