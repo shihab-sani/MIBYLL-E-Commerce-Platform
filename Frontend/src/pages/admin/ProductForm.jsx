@@ -8,7 +8,7 @@ const empty = {
     name: '', slug: '', description: '', price: '', discountPercent: 0,
     stockQuantity: 0, brand: '', active: true, featured: false,
     categoryId: '', subCategoryId: '',
-    sizeType: 'CLOTHING', variants: [], images: [],
+    sizeType: 'CLOTHING', variants: [], images: [], disabledSizes: [],
 }
 
 export default function ProductForm() {
@@ -42,6 +42,7 @@ export default function ProductForm() {
                     categoryId: p.categoryId || '', subCategoryId: '',
                     sizeType: p.sizeType || 'CLOTHING', variants: p.variants || [],
                     images: p.images || [],
+                    disabledSizes: p.disabledSizes || [],
                 })
             })
             .catch(() => toast.error('Failed to load product'))
@@ -91,7 +92,8 @@ export default function ProductForm() {
             active: form.active, featured: form.featured,
             categoryId: finalCategoryId || null,
             images: form.images, sizeType: form.sizeType,
-            variants: form.variants.filter(v => v.name.trim() !== ''), // Only send valid variants
+            variants: form.variants.filter(v => v.name.trim() !== ''),
+            disabledSizes: form.disabledSizes
         }
         try {
             if (isEdit) await api.put(`/admin/products/${id}`, payload)
@@ -203,6 +205,44 @@ export default function ProductForm() {
                             <option value="NONE">No Sizes</option>
                         </select>
                     </div>
+
+                    {/* NEW: DISABLE SIZES SECTION */}
+                    {form.sizeType !== 'NONE' && (
+                        <div className="pt-2">
+                            <label className="label-field">Disable Specific Sizes (Optional)</label>
+                            <p className="text-[10px] text-muted mb-3">Click a size to disable it. Disabled sizes won't appear on the product page.</p>
+                            <div className="flex flex-wrap gap-2">
+                                {/* Generate standard sizes based on selection */}
+                                {(form.sizeType === 'CLOTHING' ? ['XS', 'S', 'M', 'L', 'XL'] :
+                                        form.sizeType === 'SHOES' ? ['38', '39', '40', '41', '42', '43', '44', '45'] :
+                                            form.sizeType === 'RINGS' ? ['5', '6', '7', '8', '9', '10', '11', '12'] : []
+                                ).map(size => {
+                                    const isDisabled = form.disabledSizes.includes(size);
+                                    return (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            onClick={() => {
+                                                setForm(f => ({
+                                                    ...f,
+                                                    disabledSizes: isDisabled
+                                                        ? f.disabledSizes.filter(s => s !== size)
+                                                        : [...f.disabledSizes, size]
+                                                }))
+                                            }}
+                                            className={`w-12 h-10 text-xs border transition-colors ${
+                                                isDisabled
+                                                    ? 'bg-red-500/10 text-red-500 border-red-500 line-through'
+                                                    : 'bg-surface text-fg border-c hover:border-fg'
+                                            }`}
+                                        >
+                                            {size}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </section>
 
                 {/* DESIGN / COLOR VARIANTS */}

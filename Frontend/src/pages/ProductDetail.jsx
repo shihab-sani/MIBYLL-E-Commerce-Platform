@@ -27,10 +27,15 @@ export default function ProductDetail() {
 
     // Helper to get available sizes based on Admin's selection
     const getSizes = (type) => {
-        if (type === 'CLOTHING') return ['XS', 'S', 'M', 'L', 'XL']
-        if (type === 'SHOES') return ['38', '39', '40', '41', '42', '43', '44', '45']
-        if (type === 'RINGS') return ['5', '6', '7', '8', '9', '10', '11', '12']
-        return []
+        let allSizes = [];
+        if (type === 'CLOTHING') allSizes = ['XS', 'S', 'M', 'L', 'XL']
+        else if (type === 'SHOES') allSizes = ['38', '39', '40', '41', '42', '43', '44', '45']
+        else if (type === 'RINGS') allSizes = ['5', '6', '7', '8', '9', '10', '11', '12']
+
+        if (product?.disabledSizes) {
+            return allSizes.filter(s => !product.disabledSizes.includes(s))
+        }
+        return allSizes
     }
 
     const availableSizes = getSizes(product?.sizeType)

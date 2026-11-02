@@ -98,11 +98,17 @@ export default function Shop() {
     const page = parseInt(params.get('page') || '0', 10)
 
     // Helper to get available sizes
-    const getSizes = (type) => {
-        if (type === 'CLOTHING') return ['XS', 'S', 'M', 'L', 'XL']
-        if (type === 'SHOES') return ['38', '39', '40', '41', '42', '43', '44', '45']
-        if (type === 'RINGS') return ['5', '6', '7', '8', '9', '10', '11', '12']
-        return []
+    const getSizes = (product) => {
+        const type = product.sizeType;
+        let allSizes = [];
+        if (type === 'CLOTHING') allSizes = ['XS', 'S', 'M', 'L', 'XL'];
+        else if (type === 'SHOES') allSizes = ['38', '39', '40', '41', '42', '43', '44', '45'];
+        else if (type === 'RINGS') allSizes = ['5', '6', '7', '8', '9', '10', '11', '12'];
+
+        if (product.disabledSizes) {
+            return allSizes.filter(s => !product.disabledSizes.includes(s));
+        }
+        return allSizes;
     }
 
     // Toggle variant selection (click same one to deselect)
@@ -248,7 +254,7 @@ export default function Shop() {
                     {featuredProducts.map((product, index) => {
                         const isReverse = index % 2 !== 0
                         const selection = productSelections[product.id] || { size: '', variant: null }
-                        const availableSizes = getSizes(product.sizeType)
+                        const availableSizes = getSizes(product)
 
                         return (
                             <section key={product.id} className={`flex flex-col md:flex-row h-screen min-h-[600px] mb-12 bg-surface ${isReverse ? 'md:flex-row-reverse' : ''}`}>
