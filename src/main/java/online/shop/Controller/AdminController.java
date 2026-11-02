@@ -173,7 +173,7 @@ public class AdminController {
     public ResponseEntity<OrderDto> updateOrderStatus(@AuthenticationPrincipal UserDetails ud,
                                                       @PathVariable UUID id,
                                                       @RequestBody UpdateStatusRequest req) {
-        OrderDto updated = orderService.updateStatus(id, req.status());
+        OrderDto updated = orderService.updateStatus(id, String.valueOf(req.status()));
         auditService.log(ud.getUsername(), roleOf(ud), "ORDER_STATUS_CHANGED", "ORDER",
                 String.valueOf(id), "Status → " + req.status());
         return ResponseEntity.ok(updated);
@@ -278,6 +278,12 @@ public class AdminController {
     @PatchMapping("/requests/{id}/read")
     public ResponseEntity<Void> adminMarkRead(@PathVariable UUID id) {
         requestService.markAsRead(id, "ADMIN");
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/requests/{id}/close")
+    public ResponseEntity<Void> closeRequest(@PathVariable UUID id) {
+        requestService.closeRequest(id);
         return ResponseEntity.ok().build();
     }
 

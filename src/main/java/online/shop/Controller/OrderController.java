@@ -77,4 +77,10 @@ public class OrderController {
         requestService.markAllAsRead(ud.getUsername(), "CUSTOMER");
         return ResponseEntity.ok().build();
     }
+
+    @PatchMapping("/requests/{id}/close")
+    public ResponseEntity<Void> closeRequest(@PathVariable UUID id) {
+        requestService.closeRequest(id);
+        return ResponseEntity.ok().build();
+    }
 }

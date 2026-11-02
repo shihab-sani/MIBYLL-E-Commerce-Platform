@@ -41,8 +41,8 @@ public class OrderService {
             throw ApiException.badRequest("Your cart is empty");
         }
 
-        String adminCountry = (admin != null && admin.getCountry() != null) ? admin.getCountry() : "BD";
-        String adminCity = (admin != null && admin.getCity() != null) ? admin.getCity() : "Dhaka";
+        String adminCountry = admin.getCountry() != null ? admin.getCountry() : "BD";
+        String adminCity = admin.getCity() != null ? admin.getCity() : "Dhaka";
 
         String reqCountry = req.country() != null ? req.country() : "BD";
         String reqCity = req.city() != null ? req.city() : "";
@@ -128,13 +128,18 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderDto updateStatus(UUID orderId, OrderStatus status) {
-        Order order = orderRepository.findById(orderId)
+    public OrderDto updateStatus(UUID id, String status) {
+        Order order = orderRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
-        order.setStatus(status);
-        if (status == OrderStatus.DELIVERED) {
-            order.setDeliveredAt(LocalDateTime.now());
+
+        // FIX: Properly compare the Enum and also block REFUNDED orders
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
+            throw ApiException.badRequest("Cancelled or Refunded orders cannot be modified.");
         }
+
+        // FIX: Parse the incoming String into the OrderStatus Enum
+        order.setStatus(OrderStatus.valueOf(status.toUpperCase()));
+
         return toDto(orderRepository.save(order));
     }
 
