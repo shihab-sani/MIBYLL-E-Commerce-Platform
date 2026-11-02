@@ -2,15 +2,9 @@ package online.shop.Services;
 
 import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.ProductDtos.*;
-import online.shop.Entity.Categories;
-import online.shop.Entity.Product;
-import online.shop.Entity.ProductImage;
-import online.shop.Entity.ProductVariant;
+import online.shop.Entity.*;
 import online.shop.ExceptionsHandler.ApiException;
-import online.shop.Repositories.CartItemRepository;
-import online.shop.Repositories.CategoryRepository;
-import online.shop.Repositories.OrderItemRepository;
-import online.shop.Repositories.ProductRepository;
+import online.shop.Repositories.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +27,7 @@ public class ProductService {
     private final FileStorageService fileStorageService;
     private final CartItemRepository cartItemRepository;
     private final OrderItemRepository orderItemRepository;
+    private final CustomerRequestRepository customerRequestRepository;
 
     /* ------------ PUBLIC READ ------------ */
 
@@ -92,6 +87,11 @@ public class ProductService {
                 .featured(req.featured())
                 .build();
 
+        if (req.disabledSizes() != null) {
+            p.getDisabledSizes().addAll(req.disabledSizes());
+        }
+
+
         p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
         if (req.variants() != null) {
             p.getVariants().clear();
@@ -135,6 +135,11 @@ public class ProductService {
         p.setBrand(req.brand());
         p.setFeatured(req.featured());
         if (req.active() != null) p.setActive(req.active());
+
+        p.getDisabledSizes().clear();
+        if (req.disabledSizes() != null) {
+            p.getDisabledSizes().addAll(req.disabledSizes());
+        }
 
         p.setSizeType(req.sizeType() == null ? "CLOTHING" : req.sizeType());
         if (req.variants() != null) {
@@ -183,15 +188,28 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Product not found"));
 
+        // --- NEW: Check for open inquiries ---
+        List<CustomerRequest> requests = customerRequestRepository.findByProductId(id);
+        boolean hasOpenInquiries = requests.stream()
+                .anyMatch(req -> !"CLOSED".equals(req.getStatus()));
+
+        if (hasOpenInquiries) {
+            throw ApiException.badRequest("Cannot delete product. Please close all ongoing customer inquiries first.");
+        }
+
+        // If all are closed, delete them along with the product
+        if (!requests.isEmpty()) {
+            customerRequestRepository.deleteAll(requests);
+        }
+        // -------------------------------------
+
         cartItemRepository.deleteByProductId(id);
         orderItemRepository.nullifyProductReference(id);
 
-        // Collect main images
         List<String> imageUrls = new ArrayList<>(p.getImages().stream()
                 .map(ProductImage::getImageUrl)
                 .toList());
 
-        // Collect variant images
         p.getVariants().stream()
                 .map(ProductVariant::getImageUrl)
                 .filter(url -> url != null && !url.isBlank())
@@ -275,7 +293,8 @@ public class ProductService {
                 p.getStockQuantity(), p.getBrand(), p.isActive(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                images, p.getCreatedAt(), p.getSizeType(), variants, p.isFeatured()
+                images, p.getCreatedAt(), p.getSizeType(), variants, p.isFeatured(),
+                p.getDisabledSizes()
         );
     }
 }

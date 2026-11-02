@@ -13,7 +13,7 @@ public class ProductDtos {
             BigDecimal price, Integer discountPercent, BigDecimal finalPrice,
             Integer stockQuantity, String brand, boolean active,
             UUID categoryId, String categoryName, List<String> images, LocalDateTime createdAt,
-            String sizeType, List<VariantDto> variants, boolean featured
+            String sizeType, List<VariantDto> variants, boolean featured, List<String> disabledSizes
     ) {}
 
     public record ProductRequest(
@@ -29,7 +29,8 @@ public class ProductDtos {
             List<String> images,
             String sizeType,
             List<VariantRequest> variants,
-            boolean featured
+            boolean featured,
+            List<String> disabledSizes
     ) {}
 
     public record StockUpdateRequest(@NotNull @Min(0) Integer stockQuantity) {}

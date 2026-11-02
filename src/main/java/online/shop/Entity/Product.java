@@ -79,4 +79,10 @@ public class Product {
     @Column(nullable = false)
     @Builder.Default
     private boolean featured = false;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_disabled_sizes", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "size")
+    @Builder.Default
+    private List<String> disabledSizes = new ArrayList<>();
 }
