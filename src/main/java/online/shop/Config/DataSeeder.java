@@ -215,7 +215,8 @@ public class DataSeeder implements CommandLineRunner {
                 images,
                 "CLOTHING",
                 List.of(),
-                false       // <-- FIXED: added the missing 'featured' boolean
+                false,
+                List.of()
         ));
     }
 }
