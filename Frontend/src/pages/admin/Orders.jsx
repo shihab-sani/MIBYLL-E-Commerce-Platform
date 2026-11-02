@@ -39,7 +39,9 @@ export default function Orders() {
             await api.patch(`/admin/orders/${order.id}/status`, { status })
             toast.success(`Order marked ${status}`)
             load()
-        } catch { toast.error('Update failed') }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Update failed')
+        }
     }
 
     const filtered = filter === 'ALL' ? orders : orders.filter(o => o.status === filter)
@@ -117,15 +119,22 @@ export default function Orders() {
                                 <p className="text-lg text-fg">{money(order.totalAmount)}</p>
                             </div>
 
-                            <select
-                                value={order.status}
-                                onChange={(e) => changeStatus(order, e.target.value)}
-                                className="text-[10px] uppercase tracking-widest2 border px-3 py-2
-                           bg-surface text-fg focus:outline-none focus:border-fg cursor-pointer"
-                                style={borderColor}
-                            >
-                                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            {/* Status Dropdown or Locked Badge */}
+                            {(order.status === 'CANCELLED' || order.status === 'REFUNDED') ? (
+                                <div className="text-[10px] uppercase tracking-widest2 text-muted px-3 py-2 border border-c/50 bg-cbord/10 cursor-not-allowed" style={borderColor}>
+                                    Status Locked
+                                </div>
+                            ) : (
+                                <select
+                                    value={order.status}
+                                    onChange={(e) => changeStatus(order, e.target.value)}
+                                    className="text-[10px] uppercase tracking-widest2 border px-3 py-2
+                               bg-surface text-fg focus:outline-none focus:border-fg cursor-pointer"
+                                    style={borderColor}
+                                >
+                                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            )}
                         </div>
 
                         {expanded === order.id && (
@@ -136,7 +145,7 @@ export default function Orders() {
                                         <p className="text-[9px] uppercase tracking-widest2 text-muted mb-2">Shipping Address</p>
                                         <p className="leading-relaxed text-fg">{order.shippingAddress}</p>
 
-                                        {/* SINGLE CORRECTED REFUND BOX */}
+                                        {/* REFUND BOX */}
                                         {(order.refundRequested || order.refundRejected || order.refundApproved) && (
                                             <div className={`p-4 rounded mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border ${
                                                 order.refundApproved ? 'bg-green-900/20 border-green-900/50' :
@@ -200,7 +209,7 @@ export default function Orders() {
                                             </div>
                                         )}
 
-                                        {/* NEW: Refund History */}
+                                        {/* Refund History */}
                                         {order.refundLogs && order.refundLogs.length > 0 && (
                                             <div className="mt-6 border-t border-c pt-4">
                                                 <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
@@ -215,7 +224,7 @@ export default function Orders() {
                                                                     log.action === 'REJECTED' ? 'text-red-500' :
                                                                         log.action === 'APPROVED' ? 'text-green-500' :
                                                                             log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
-                                                                        }`}>
+                                                                }`}>
                                                                     [{log.action}]
                                                                 </span>
                                                                 <span className="text-fg">{log.reason}</span>
