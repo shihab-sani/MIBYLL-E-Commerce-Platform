@@ -34,6 +34,7 @@ export default function MyOrders() {
     const [inquiries, setInquiries] = useState([])
     const [loadingInquiries, setLoadingInquiries] = useState(true)
     const [replyTexts, setReplyTexts] = useState({})
+    const [expandedInquiryId, setExpandedInquiryId] = useState(null)
 
     // Refund Modal State
     const [refundModal, setRefundModal] = useState(null)
@@ -101,6 +102,38 @@ export default function MyOrders() {
         if (!deliveredAt) return false;
         const days = (new Date() - new Date(deliveredAt)) / (1000 * 60 * 60 * 24);
         return days >= 2;
+    }
+
+    const toggleInquiry = (inquiry) => {
+        if (expandedInquiryId === inquiry.id) {
+            setExpandedInquiryId(null)
+        } else {
+            setExpandedInquiryId(inquiry.id)
+            // Mark as read ONLY for this specific inquiry when opened
+            if (inquiry.hasUnreadCustomer) {
+                api.patch(`/orders/requests/${inquiry.id}/read`).then(() => {
+                    setInquiries(prev => prev.map(i => i.id === inquiry.id ? { ...i, hasUnreadCustomer: false } : i))
+                })
+            }
+        }
+    }
+
+    const handleCloseConversation = (id) => {
+        if(!confirm('Close this conversation? You cannot send messages afterwards.')) return;
+        api.patch(`/orders/requests/${id}/close`).then(() => {
+            toast.success('Conversation closed');
+            loadInquiries();
+        });
+    }
+
+    const sendReply = (id) => {
+        const text = replyTexts[id];
+        if (!text?.trim()) return;
+        api.post(`/orders/requests/${id}/reply`, { message: text }).then(() => {
+            setReplyTexts(prev => ({ ...prev, [id]: '' }));
+            toast.success('Message sent');
+            loadInquiries();
+        });
     }
 
     // --- GROUPED DATA FOR 'ALL' TAB ---
@@ -254,15 +287,7 @@ export default function MyOrders() {
             {/* TABS */}
             <div className="flex flex-wrap gap-2 mb-10 border-b border-c pb-4">
                 {TABS.map(t => (
-                    <button key={t.key} onClick={() => {
-                        setTab(t.key);
-                        if (t.key === 'INQUIRIES' && unreadCount > 0) {
-                            // Call the new endpoint we will create in the backend
-                            api.patch('/orders/requests/read-all').then(() => {
-                                setInquiries(prev => prev.map(i => ({ ...i, hasUnreadCustomer: false })));
-                            });
-                        }
-                    }}
+                    <button key={t.key} onClick={() => setTab(t.key)} // <-- REMOVED the read-all logic
                             className={`relative px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors 
                             ${tab === t.key ? 'bg-ink text-white border-ink' : 'text-fg border-c hover:border-fg'}`}>
                         {t.label}
@@ -331,73 +356,94 @@ export default function MyOrders() {
 
             {/* --- INQUIRIES TAB --- */}
             {tab === 'INQUIRIES' && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                     {inquiries.map((inquiry) => (
-                        <div key={inquiry.id} className="card p-6 flex flex-col gap-4">
+                        <div key={inquiry.id} className="border border-c bg-surface flex flex-col">
 
-                            {/* Header */}
-                            <div className="flex justify-between items-start border-b border-c pb-4">
+                            {/* CARD HEADER (CLICK TO EXPAND) */}
+                            <div
+                                onClick={() => toggleInquiry(inquiry)}
+                                className="p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-cbord/5 transition-colors"
+                            >
                                 <div className="flex items-center gap-4">
-                                    {inquiry.productImage && <img src={inquiry.productImage} alt="" className="w-12 h-16 object-cover bg-sand" />}
+                                    <div className="w-12 h-16 bg-sand shrink-0 overflow-hidden">
+                                        {inquiry.productImage && <img src={inquiry.productImage} alt="" className="w-full h-full object-cover" />}
+                                    </div>
                                     <div>
-                                        <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
-                                        <p className="text-[10px] uppercase text-muted">
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
+                                            {/* Unread Red Dot */}
+                                            {inquiry.hasUnreadCustomer && (
+                                                <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse" title="New Reply"></span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] uppercase text-muted mt-1">
                                             {inquiry.size && `Size: ${inquiry.size} | `}
                                             {inquiry.variantName && `Design: ${inquiry.variantName}`}
                                         </p>
                                     </div>
                                 </div>
-                                <span className={`text-[9px] uppercase tracking-widest2 px-3 py-1 border ${inquiry.status === 'PENDING' ? 'border-amber-500 text-amber-500' : 'border-green-500 text-green-500'}`}>
-                                    {inquiry.status}
-                                </span>
+                                <div className="flex items-center gap-4">
+                                    <span className={`text-[9px] uppercase tracking-widest2 px-3 py-1 border ${
+                                        inquiry.status === 'PENDING' ? 'border-amber-500 text-amber-500' :
+                                            inquiry.status === 'REPLIED' ? 'border-green-500 text-green-500' :
+                                                inquiry.status === 'CLOSED' ? 'border-gray-600 text-gray-500' :
+                                                    'border-gray-500 text-gray-400'
+                                    }`}>
+                                        {inquiry.status}
+                                    </span>
+                                    <svg className={`w-5 h-5 text-muted transition-transform ${expandedInquiryId === inquiry.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </div>
 
-                            {/* Chat History */}
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar p-2">
-                                {inquiry.messages.map((msg) => (
-                                    <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'CUSTOMER' ? 'items-end' : 'items-start'}`}>
-                                        <span className="text-[9px] text-muted mb-1">{msg.senderRole === 'CUSTOMER' ? 'You' : 'Mibyll Support'}</span>
-                                        <div className={`px-4 py-2 max-w-[80%] text-sm ${msg.senderRole === 'CUSTOMER' ? 'bg-ink text-white' : 'bg-cbord/20 text-fg'}`}>
-                                            {msg.message}
-                                        </div>
+                            {/* EXPANDABLE CHAT AREA */}
+                            {expandedInquiryId === inquiry.id && (
+                                <div className="border-t border-c p-4 sm:p-6 bg-cbord/5 flex flex-col gap-4 animate-fade-in">
+
+                                    {/* Close Button & Status */}
+                                    <div className="flex justify-between items-center pb-2 border-b border-c">
+                                        <p className="text-xs text-muted">Inquiry from you</p>
+                                        {inquiry.status !== 'CLOSED' && (
+                                            <button onClick={() => handleCloseConversation(inquiry.id)} className="text-[10px] uppercase tracking-widest2 text-red-500 hover:underline">
+                                                Close Conversation
+                                            </button>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
 
-                            {/* Reply Box */}
-                            <div className="flex gap-2 pt-4 border-t border-c">
-                                <input
-                                    type="text"
-                                    placeholder="Type a message..."
-                                    className="input-field flex-1"
-                                    value={replyTexts[inquiry.id] || ''}  // <-- Target specific ID
-                                    onChange={(e) => setReplyTexts(prev => ({ ...prev, [inquiry.id]: e.target.value }))} // <-- Update specific ID
-                                    onKeyDown={(e) => {
-                                        const text = replyTexts[inquiry.id];
-                                        if (e.key === 'Enter' && text?.trim()) {
-                                            api.post(`/orders/requests/${inquiry.id}/reply`, { message: text }).then(() => {
-                                                setReplyTexts(prev => ({ ...prev, [inquiry.id]: '' })); // <-- Clear specific ID
-                                                toast.success('Message sent');
-                                                loadInquiries();
-                                            });
-                                        }
-                                    }}
-                                />
-                                <button
-                                    onClick={() => {
-                                        const text = replyTexts[inquiry.id];
-                                        if (!text?.trim()) return;
-                                        api.post(`/orders/requests/${inquiry.id}/reply`, { message: text }).then(() => {
-                                            setReplyTexts(prev => ({ ...prev, [inquiry.id]: '' }));
-                                            toast.success('Message sent');
-                                            loadInquiries();
-                                        });
-                                    }}
-                                    className="btn-primary px-6"
-                                >
-                                    Send
-                                </button>
-                            </div>
+                                    {/* Chat History */}
+                                    <div className="space-y-4 max-h-[350px] overflow-y-auto custom-scrollbar p-2">
+                                        {inquiry.messages.map((msg) => (
+                                            <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'CUSTOMER' ? 'items-end' : 'items-start'}`}>
+                                                <span className="text-[9px] text-muted mb-1">{msg.senderRole === 'CUSTOMER' ? 'You' : 'Mibyll Support'}</span>
+                                                <div className={`px-4 py-2 max-w-[85%] text-sm ${msg.senderRole === 'CUSTOMER' ? 'bg-ink text-white' : 'bg-surface border border-c text-fg'}`}>
+                                                    {msg.message}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Reply Form */}
+                                    {inquiry.status === 'CLOSED' ? (
+                                        <div className="p-4 border border-c bg-surface text-center text-sm text-muted">
+                                            This conversation is closed.
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Type a message..."
+                                                className="input-field flex-1"
+                                                value={replyTexts[inquiry.id] || ''}
+                                                onChange={(e) => setReplyTexts(prev => ({ ...prev, [inquiry.id]: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') sendReply(inquiry.id); }}
+                                            />
+                                            <button onClick={() => sendReply(inquiry.id)} className="btn-primary px-6">Send</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

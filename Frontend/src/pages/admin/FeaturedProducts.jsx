@@ -1,18 +1,37 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
 export default function FeaturedProducts() {
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
+    const navigate = useNavigate() // <-- Initialize navigate
 
-    useEffect(() => {
+    // Extracted the load function so it can be called after delete
+    const load = useCallback(() => {
+        setLoading(true)
         api.get('/admin/products')
             .then(r => setProducts(r.data.filter(p => p.featured === true)))
             .catch(() => toast.error('Failed to load'))
             .finally(() => setLoading(false))
     }, [])
+
+    useEffect(() => {
+        load()
+    }, [load])
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this featured product? This action cannot be undone.')) return;
+
+        try {
+            await api.delete(`/admin/products/${id}`);
+            toast.success('Product deleted successfully');
+            load(); // Refresh the list
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete product');
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -59,10 +78,21 @@ export default function FeaturedProducts() {
                                         {p.active ? 'Active' : 'Hidden'}
                                     </span>
                             </td>
-                            <td className="px-5 py-4 text-right">
-                                <Link to={`/admin/products/${p.id}/edit`} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">
-                                    Edit
-                                </Link>
+                            <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-4">
+                                    <button
+                                        onClick={() => navigate(`/admin/products/${p.id}/edit`)} // <-- Changed to p.id
+                                        className="text-[10px] uppercase tracking-widest2 text-fg hover:underline"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(p.id)} // <-- Changed to p.id
+                                        className="text-[10px] uppercase tracking-widest2 text-red-500 hover:underline"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}
