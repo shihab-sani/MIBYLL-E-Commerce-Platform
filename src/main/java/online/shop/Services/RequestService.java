@@ -43,7 +43,13 @@ public class RequestService {
 
     @Transactional
     public void reply(UUID requestId, String role, String text) {
-        CustomerRequest req = requestRepository.findById(requestId).orElseThrow();
+        CustomerRequest req = requestRepository.findById(requestId)
+                .orElseThrow(() -> ApiException.notFound("Request not found"));
+
+        // ADD THIS CHECK:
+        if ("CLOSED".equals(req.getStatus())) {
+            throw ApiException.badRequest("This conversation is closed.");
+        }
 
         RequestMessage msg = RequestMessage.builder()
                 .request(req).senderRole(role).message(text).build();
@@ -53,7 +59,7 @@ public class RequestService {
             req.setStatus("REPLIED");
         } else {
             msg.setReadByCustomer(true);
-            req.setStatus("PENDING"); // Pending admin reply
+            req.setStatus("PENDING");
         }
 
         req.getMessages().add(msg);
@@ -107,6 +113,15 @@ public class RequestService {
 
         return toDto(requestRepository.save(req));
     }
+
+    @Transactional
+    public void closeRequest(UUID id) {
+        CustomerRequest req = requestRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Request not found"));
+        req.setStatus("CLOSED");
+        requestRepository.save(req);
+    }
+
 
     private RequestDto toDto(CustomerRequest r) {
         String img = r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl();

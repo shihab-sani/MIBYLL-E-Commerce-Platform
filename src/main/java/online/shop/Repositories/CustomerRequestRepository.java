@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface CustomerRequestRepository extends JpaRepository<CustomerRequest, UUID> {
     List<CustomerRequest> findByUserIdOrderByCreatedAtDesc(UUID userId);
     List<CustomerRequest> findAllByOrderByCreatedAtDesc();
+    List<CustomerRequest> findByProductId(UUID id);
 }
