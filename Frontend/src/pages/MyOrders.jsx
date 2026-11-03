@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { createPortal } from 'react-dom' // <-- Added for Modal
 import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
@@ -19,6 +20,7 @@ const TABS = [
     { key: 'CART',      label: 'In Cart' },
     { key: 'ONGOING',   label: 'Ongoing' },
     { key: 'DELIVERED', label: 'Delivered' },
+    { key: 'REFUNDED',  label: 'Refunded' },
     { key: 'CANCELLED', label: 'Cancelled' },
     { key: 'INQUIRIES', label: 'My Inquiries' },
 ]
@@ -98,18 +100,28 @@ export default function MyOrders() {
         }
     }
 
-    const isRefundExpired = (deliveredAt) => {
-        if (!deliveredAt) return false;
-        const days = (new Date() - new Date(deliveredAt)) / (1000 * 60 * 60 * 24);
-        return days >= 2;
-    }
+    const checkRefundExpiry = (order) => {
+        if (!order.deliveredAt) return false;
+
+        // Find the latest rejection log
+        const lastRejection = order.refundLogs?.filter(l => l.action === 'REJECTED').pop();
+
+        if (lastRejection) {
+            // If previously rejected, check if 2 days have passed since the rejection
+            const days = (new Date() - new Date(lastRejection.createdAt)) / (1000 * 60 * 60 * 24);
+            return days >= 2;
+        } else {
+            // If first time requesting, check if 3 days have passed since delivery
+            const days = (new Date() - new Date(order.deliveredAt)) / (1000 * 60 * 60 * 24);
+            return days >= 3;
+        }
+    };
 
     const toggleInquiry = (inquiry) => {
         if (expandedInquiryId === inquiry.id) {
             setExpandedInquiryId(null)
         } else {
             setExpandedInquiryId(inquiry.id)
-            // Mark as read ONLY for this specific inquiry when opened
             if (inquiry.hasUnreadCustomer) {
                 api.patch(`/orders/requests/${inquiry.id}/read`).then(() => {
                     setInquiries(prev => prev.map(i => i.id === inquiry.id ? { ...i, hasUnreadCustomer: false } : i))
@@ -140,6 +152,9 @@ export default function MyOrders() {
     const ongoingOrders = orders.filter(o => ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status))
     const deliveredOrders = orders.filter(o => o.status === 'DELIVERED')
     const cancelledOrders = orders.filter(o => o.status === 'CANCELLED')
+    const refundedOrders = orders.filter(o =>
+        o.status === 'REFUNDED' || o.refundRejected || o.refundRequested
+    )
     const unreadCount = inquiries.filter(i => i.hasUnreadCustomer).length;
 
     // --- REUSABLE UI COMPONENTS ---
@@ -161,124 +176,139 @@ export default function MyOrders() {
         </div>
     )
 
-    const OrderCard = ({ order }) => (
-        <div className="card mb-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-c">
-                <div>
-                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Order</p>
-                    <p className="text-sm font-medium text-fg mt-1">{order.orderNumber}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Date</p>
-                    <p className="text-sm text-fg mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] uppercase tracking-widest2 text-muted">Total</p>
-                    <p className="text-sm text-fg mt-1">৳ {order.totalAmount}</p>
-                </div>
-                <div className="flex gap-2">
-                    <span className={`text-[10px] uppercase tracking-widest2 px-3 py-1.5 ${STATUS_STYLES[order.status]}`}>
-                        {order.status}
-                    </span>
-                    {order.refundApproved && (
-                        <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
-                            Refund Approved
-                        </span>
-                    )}
-                    {order.refundRejected && (
-                        <span className="text-[10px] uppercase tracking-widest2 px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700">
-                            Refund Rejected
-                        </span>
-                    )}
-                </div>
-            </div>
+    const OrderCard = ({ order }) => {
+        const isExpired = checkRefundExpiry(order);
+        const hasPastRejections = order.refundLogs?.some(log => log.action === 'REJECTED');
 
-            <div className="p-6 space-y-4">
-                {order.items.map(item => (
-                    <div key={item.id} className="flex gap-4">
-                        <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
-                            {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
-                        </div>
-                        <div className="flex-1 text-sm">
-                            <p className="text-fg">{item.productName}</p>
-                            <p className="text-xs text-muted mt-1">
-                                {item.size && `Size ${item.size} · `}Qty {item.quantity} · ৳ {item.unitPrice}
-                            </p>
-                        </div>
-                        <span className="text-sm text-fg">৳ {item.subtotal}</span>
+        return (
+            <div className="card mb-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-c">
+                    <div>
+                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Order</p>
+                        <p className="text-sm font-medium text-fg mt-1">{order.orderNumber}</p>
                     </div>
-                ))}
-            </div>
-
-            <div className="px-6 pb-6 flex flex-wrap items-end justify-between gap-4">
-                <div className="text-xs text-muted">
-                    <p><span className="uppercase tracking-widest2 text-[10px]">Ship to:</span> <span className="text-fg">{order.shippingAddress}</span></p>
-                    <p className="mt-1"><span className="uppercase tracking-widest2 text-[10px]">Phone:</span> <span className="text-fg">{order.phone}</span></p>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                    {order.refundRejected && !order.refundRequested && (
-                        <p className="text-xs text-red-400 text-right mb-2 max-w-xs">
-                            <span className="font-bold uppercase tracking-widest text-[9px] block mb-1">Rejection Reason:</span>
-                            {order.refundRejectionReason}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3">
-                        {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
-                            <button onClick={() => handleCancel(order.id)} className="btn-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
-                                Cancel Order
-                            </button>
-                        )}
-
-                        {order.status === 'DELIVERED' && (
-                            order.refundApproved ? (
-                                <span className="btn-outline border-green-500 text-green-500 disabled:opacity-100">
-                                    Refund Approved
-                                </span>
-                            ) : order.refundRequested ? (
-                                <button onClick={() => handleCancelRefund(order.id)} className="btn-outline border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white">
-                                    Cancel Refund Request
-                                </button>
-                            ) : (
-                                <button
-                                    disabled={isRefundExpired(order.deliveredAt)}
-                                    onClick={() => setRefundModal({ orderId: order.id })}
-                                    className={`btn-outline disabled:opacity-50 disabled:cursor-not-allowed ${order.refundRejected ? 'border-red-500 text-red-500' : ''}`}
-                                >
-                                    {isRefundExpired(order.deliveredAt) ? 'Refund Expired' : order.refundRejected ? 'Request Refund Again' : 'Request Refund'}
-                                </button>
-                            )
-                        )}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Date</p>
+                        <p className="text-sm text-fg mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] uppercase tracking-widest2 text-muted">Total</p>
+                        <p className="text-sm text-fg mt-1">৳ {order.totalAmount}</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <span className={`text-[10px] uppercase tracking-widest2 px-3 py-1.5 ${STATUS_STYLES[order.status]}`}>
+                            {order.status}
+                        </span>
                     </div>
                 </div>
-                {order.refundLogs && order.refundLogs.length > 0 && (
-                    <div className="w-full mt-6 pt-6 border-t border-c">
-                        <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
-                        <div className="space-y-3">
-                            {order.refundLogs.map(log => (
-                                <div key={log.id} className="flex flex-col sm:flex-row sm:gap-3 text-xs">
-                                    <div className="w-24 shrink-0 text-muted">
-                                        {new Date(log.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div>
-                                        <span className={`font-bold uppercase tracking-wider text-[9px] mr-2 ${
-                                            log.action === 'REJECTED' ? 'text-red-500' :
-                                                log.action === 'APPROVED' ? 'text-green-500' :
-                                                    log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
-                                        }`}>
-                                            [{log.action}]
-                                        </span>
-                                        <span className="text-fg">{log.reason}</span>
-                                    </div>
+
+                <div className="p-6 space-y-4">
+                    {order.items.map(item => (
+                        <div key={item.id} className="flex gap-4">
+                            <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
+                                {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                            <div className="flex-1 text-sm">
+                                <p className="text-fg">{item.productName}</p>
+                                <p className="text-xs text-muted mt-1">
+                                    {item.size && `Size ${item.size} · `}Qty {item.quantity} · ৳ {item.unitPrice}
+                                </p>
+                            </div>
+                            <span className="text-sm text-fg">৳ {item.subtotal}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="px-6 pb-6 flex flex-wrap items-end justify-between gap-4">
+                    <div className="text-xs text-muted w-full">
+                        <p><span className="uppercase tracking-widest2 text-[10px]">Ship to:</span> <span className="text-fg">{order.shippingAddress}</span></p>
+                        <p className="mt-1"><span className="uppercase tracking-widest2 text-[10px]">Phone:</span> <span className="text-fg">{order.phone}</span></p>
+
+                        {/* CUSTOMER REFUND BOX */}
+                        {(order.refundRequested || order.refundRejected || order.refundApproved) && (
+                            <div className={`mt-6 p-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border ${
+                                order.refundApproved ? 'bg-green-900/10 border-green-900/30' :
+                                    order.refundRejected && !order.refundRequested ? 'bg-gray-900/20 border-gray-700' :
+                                        'bg-amber-900/10 border-amber-900/30'
+                            }`}>
+                                <div>
+                                    {order.refundRequested ? (
+                                        <>
+                                            <p className="text-[10px] uppercase tracking-widest2 text-amber-500 mb-1">Refund Pending</p>
+                                            <p className="text-sm text-amber-200/70">Reason: {order.refundReason}</p>
+                                        </>
+                                    ) : order.refundApproved ? (
+                                        <p className="text-[10px] uppercase tracking-widest2 text-green-500 mb-1">Refund Approved</p>
+                                    ) : (
+                                        <>
+                                            <p className="text-[10px] uppercase tracking-widest2 text-gray-400 mb-1">Refund Rejected</p>
+                                            <p className="text-sm text-gray-400">Reason: {order.refundRejectionReason}</p>
+                                        </>
+                                    )}
                                 </div>
-                            ))}
+                            </div>
+                        )}
+
+                        {/* CUSTOMER REFUND HISTORY */}
+                        {order.refundLogs && order.refundLogs.length > 0 && (
+                            <div className="w-full mt-6 pt-6 border-t border-c">
+                                <p className="text-[10px] uppercase tracking-widest2 text-muted mb-3">Refund History</p>
+                                <div className="space-y-3">
+                                    {order.refundLogs.map(log => (
+                                        <div key={log.id} className="flex flex-col sm:flex-row sm:gap-3 text-xs">
+                                            <div className="w-24 shrink-0 text-muted">
+                                                {new Date(log.createdAt).toLocaleDateString()}
+                                            </div>
+                                            <div>
+                                                <span className={`font-bold uppercase tracking-wider text-[9px] mr-2 ${
+                                                    log.action === 'REJECTED' ? 'text-red-500' :
+                                                        log.action === 'APPROVED' ? 'text-green-500' :
+                                                            log.action === 'REQUESTED' ? 'text-amber-500' : 'text-gray-400'
+                                                }`}>
+                                                    [{log.action}]
+                                                </span>
+                                                <span className="text-fg">{log.reason}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2 ml-auto">
+                        <div className="flex gap-3">
+                            {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                                <button onClick={() => handleCancel(order.id)} className="btn-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
+                                    Cancel Order
+                                </button>
+                            )}
+
+                            {order.status === 'DELIVERED' && (
+                                order.refundApproved ? null : order.refundRequested ? (
+                                    <button onClick={() => handleCancelRefund(order.id)} className="btn-outline border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white">
+                                        Cancel Refund Request
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled={isExpired}
+                                        onClick={() => setRefundModal({ orderId: order.id })}
+                                        className={`btn-outline disabled:opacity-50 disabled:cursor-not-allowed ${hasPastRejections ? 'border-red-500 text-red-500' : ''}`}
+                                    >
+                                        {isExpired
+                                            ? 'Refund Window Expired'
+                                            : (order.refundRejected || hasPastRejections)
+                                                ? 'Request Refund Again'
+                                                : 'Request Refund'}
+                                    </button>
+                                )
+                            )}
                         </div>
                     </div>
-                )}
+                </div>
             </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <div className="max-w-[1100px] mx-auto px-5 lg:px-10 py-12 lg:py-16">
@@ -287,7 +317,7 @@ export default function MyOrders() {
             {/* TABS */}
             <div className="flex flex-wrap gap-2 mb-10 border-b border-c pb-4">
                 {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)} // <-- REMOVED the read-all logic
+                    <button key={t.key} onClick={() => setTab(t.key)}
                             className={`relative px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors 
                             ${tab === t.key ? 'bg-ink text-white border-ink' : 'text-fg border-c hover:border-fg'}`}>
                         {t.label}
@@ -300,25 +330,21 @@ export default function MyOrders() {
                 ))}
             </div>
 
-            {/* --- ALL TAB (DARAZ STYLE) --- */}
+            {/* --- ALL TAB --- */}
             {tab === 'ALL' && (
                 <div className="space-y-12">
                     {loading ? (
                         <div className="py-20 text-center text-sm text-muted">Loading...</div>
                     ) : (
                         <>
-                            {/* CART ITEMS */}
                             {cart?.items?.length > 0 && (
                                 <section>
                                     <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">In Cart</h2>
                                     {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
-                                    <div className="pt-2">
-                                        <Link to="/cart" className="btn-primary">Go to Cart</Link>
-                                    </div>
+                                    <div className="pt-2"><Link to="/cart" className="btn-primary">Go to Cart</Link></div>
                                 </section>
                             )}
 
-                            {/* ONGOING ORDERS */}
                             {ongoingOrders.length > 0 && (
                                 <section>
                                     <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Ongoing Orders</h2>
@@ -326,7 +352,6 @@ export default function MyOrders() {
                                 </section>
                             )}
 
-                            {/* DELIVERED ORDERS */}
                             {deliveredOrders.length > 0 && (
                                 <section>
                                     <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Delivered Orders</h2>
@@ -334,7 +359,6 @@ export default function MyOrders() {
                                 </section>
                             )}
 
-                            {/* CANCELLED ORDERS */}
                             {cancelledOrders.length > 0 && (
                                 <section>
                                     <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Cancelled Orders</h2>
@@ -342,7 +366,13 @@ export default function MyOrders() {
                                 </section>
                             )}
 
-                            {/* IF EVERYTHING IS EMPTY */}
+                            {refundedOrders.length > 0 && (
+                                <section>
+                                    <h2 className="text-[11px] uppercase tracking-widest2 text-muted mb-4 border-b border-c pb-2">Refunded Orders</h2>
+                                    {refundedOrders.map(order => <OrderCard key={order.id} order={order} />)}
+                                </section>
+                            )}
+
                             {cart?.items?.length === 0 && orders.length === 0 && (
                                 <div className="py-24 text-center">
                                     <p className="text-sm text-muted mb-8">You have no recent activity.</p>
@@ -359,12 +389,7 @@ export default function MyOrders() {
                 <div className="space-y-4">
                     {inquiries.map((inquiry) => (
                         <div key={inquiry.id} className="border border-c bg-surface flex flex-col">
-
-                            {/* CARD HEADER (CLICK TO EXPAND) */}
-                            <div
-                                onClick={() => toggleInquiry(inquiry)}
-                                className="p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-cbord/5 transition-colors"
-                            >
+                            <div onClick={() => toggleInquiry(inquiry)} className="p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-cbord/5 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-16 bg-sand shrink-0 overflow-hidden">
                                         {inquiry.productImage && <img src={inquiry.productImage} alt="" className="w-full h-full object-cover" />}
@@ -372,10 +397,7 @@ export default function MyOrders() {
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <p className="text-sm font-serif text-fg">{inquiry.productName}</p>
-                                            {/* Unread Red Dot */}
-                                            {inquiry.hasUnreadCustomer && (
-                                                <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse" title="New Reply"></span>
-                                            )}
+                                            {inquiry.hasUnreadCustomer && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse" title="New Reply"></span>}
                                         </div>
                                         <p className="text-[10px] uppercase text-muted mt-1">
                                             {inquiry.size && `Size: ${inquiry.size} | `}
@@ -398,11 +420,8 @@ export default function MyOrders() {
                                 </div>
                             </div>
 
-                            {/* EXPANDABLE CHAT AREA */}
                             {expandedInquiryId === inquiry.id && (
                                 <div className="border-t border-c p-4 sm:p-6 bg-cbord/5 flex flex-col gap-4 animate-fade-in">
-
-                                    {/* Close Button & Status */}
                                     <div className="flex justify-between items-center pb-2 border-b border-c">
                                         <p className="text-xs text-muted">Inquiry from you</p>
                                         {inquiry.status !== 'CLOSED' && (
@@ -412,7 +431,6 @@ export default function MyOrders() {
                                         )}
                                     </div>
 
-                                    {/* Chat History */}
                                     <div className="space-y-4 max-h-[350px] overflow-y-auto custom-scrollbar p-2">
                                         {inquiry.messages.map((msg) => (
                                             <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'CUSTOMER' ? 'items-end' : 'items-start'}`}>
@@ -424,7 +442,6 @@ export default function MyOrders() {
                                         ))}
                                     </div>
 
-                                    {/* Reply Form */}
                                     {inquiry.status === 'CLOSED' ? (
                                         <div className="p-4 border border-c bg-surface text-center text-sm text-muted">
                                             This conversation is closed.
@@ -449,7 +466,7 @@ export default function MyOrders() {
                 </div>
             )}
 
-            {/* --- CART TAB (ONLY CART) --- */}
+            {/* --- CART TAB --- */}
             {tab === 'CART' && (
                 cart?.items?.length === 0 ? (
                     <div className="py-20 text-center">
@@ -462,15 +479,13 @@ export default function MyOrders() {
                             Items currently in your cart — {cart.items.length} item(s), subtotal {formatPrice(cart.subtotal)}
                         </p>
                         {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
-                        <div className="pt-4 mt-6 border-t border-c">
-                            <Link to="/cart" className="btn-primary">Go to Cart</Link>
-                        </div>
+                        <div className="pt-4 mt-6 border-t border-c"><Link to="/cart" className="btn-primary">Go to Cart</Link></div>
                     </div>
                 )
             )}
 
-            {/* --- SPECIFIC ORDER TABS (ONGOING, DELIVERED, CANCELLED) --- */}
-            {['ONGOING', 'DELIVERED', 'CANCELLED'].includes(tab) && (
+            {/* --- SPECIFIC ORDER TABS --- */}
+            {['ONGOING', 'DELIVERED', 'CANCELLED', 'REFUNDED'].includes(tab) && (
                 loading ? (
                     <div className="py-20 text-center text-sm text-muted">Loading orders…</div>
                 ) : (
@@ -479,6 +494,7 @@ export default function MyOrders() {
                         if (tab === 'ONGOING') filtered = ongoingOrders
                         if (tab === 'DELIVERED') filtered = deliveredOrders
                         if (tab === 'CANCELLED') filtered = cancelledOrders
+                        if (tab === 'REFUNDED') filtered = refundedOrders
 
                         return filtered.length === 0 ? (
                             <div className="py-24 text-center">
@@ -494,11 +510,11 @@ export default function MyOrders() {
                 )
             )}
 
-            {/* REFUND MODAL */}
-            {refundModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-5">
-                    <div className="absolute inset-0 bg-black/60" onClick={() => setRefundModal(null)} />
-                    <div className="relative card p-6 w-full max-w-md animate-page-in">
+            {/* REFUND MODAL (Now using Portal for correct centering) */}
+            {refundModal && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-5">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRefundModal(null)} />
+                    <div className="relative card p-6 w-full max-w-md animate-page-in shadow-2xl border-c">
                         <h2 className="text-xl font-serif mb-4 text-fg">Request Refund</h2>
                         <form onSubmit={handleRefund}>
                             <label className="label-field">Reason for return</label>
@@ -517,7 +533,8 @@ export default function MyOrders() {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )

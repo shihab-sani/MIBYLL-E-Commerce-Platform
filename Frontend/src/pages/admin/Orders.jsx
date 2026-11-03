@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import {createPortal} from "react-dom";
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']
 const money = (n) => `৳ ${Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -19,6 +20,8 @@ export default function Orders() {
     const [filter, setFilter] = useState('ALL')
     const [loading, setLoading] = useState(true)
     const [expanded, setExpanded] = useState(null)
+    const [cancelModal, setCancelModal] = useState(null)
+    const [cancelReason, setCancelReason] = useState('')
 
     // Reject Modal State
     const [rejectModal, setRejectModal] = useState(null)
@@ -35,8 +38,14 @@ export default function Orders() {
     useEffect(load, [])
 
     const changeStatus = async (order, status) => {
+        // If changing to CANCELLED, open the modal instead of immediate API call
+        if (status === 'CANCELLED') {
+            setCancelModal({ orderId: order.id })
+            return
+        }
+
         try {
-            await api.patch(`/admin/orders/${order.id}/status`, { status })
+            await api.patch(`/admin/orders/${order.id}/status`, { status, reason: '' })
             toast.success(`Order marked ${status}`)
             load()
         } catch (err) {
@@ -44,11 +53,38 @@ export default function Orders() {
         }
     }
 
-    const filtered = filter === 'ALL' ? orders : orders.filter(o => o.status === filter)
+    const handleCancelSubmit = async (e) => {
+        e.preventDefault()
+        if (!cancelReason.trim()) return toast.error('Please provide a reason')
+
+        try {
+            await api.patch(`/admin/orders/${cancelModal.orderId}/status`, {
+                status: 'CANCELLED',
+                reason: cancelReason
+            })
+            toast.success('Order cancelled')
+            setCancelModal(null)
+            setCancelReason('')
+            load()
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to cancel')
+        }
+    }
+
+    const filtered = filter === 'ALL' ? orders : orders.filter(o => {
+        if (filter === 'REFUNDED') {
+            return o.status === 'REFUNDED' || o.refundRejected || o.refundRequested;
+        }
+        return o.status === filter;
+    })
 
     const counts = STATUSES.reduce((acc, s) => {
-        acc[s] = orders.filter(o => o.status === s).length
-        return acc
+        if (s === 'REFUNDED') {
+            acc[s] = orders.filter(o => o.status === 'REFUNDED' || o.refundRejected || o.refundRequested).length;
+        } else {
+            acc[s] = orders.filter(o => o.status === s).length;
+        }
+        return acc;
     }, {})
 
     const borderColor = { borderColor: 'rgb(var(--cbord))' }
@@ -128,11 +164,18 @@ export default function Orders() {
                                 <select
                                     value={order.status}
                                     onChange={(e) => changeStatus(order, e.target.value)}
-                                    className="text-[10px] uppercase tracking-widest2 border px-3 py-2
-                               bg-surface text-fg focus:outline-none focus:border-fg cursor-pointer"
+                                    className="text-[10px] uppercase tracking-widest2 border px-3 py-2 bg-surface text-fg focus:outline-none focus:border-fg cursor-pointer"
                                     style={borderColor}
                                 >
-                                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    {STATUSES.map(s => {
+                                        // 1. Hide REFUNDED unless requested
+                                        if (s === 'REFUNDED' && !order.refundRequested) return null;
+
+                                        // 2. Hide CANCELLED if SHIPPED or DELIVERED
+                                        if (s === 'CANCELLED' && (order.status === 'SHIPPED' || order.status === 'DELIVERED')) return null;
+
+                                        return <option key={s} value={s}>{s}</option>
+                                    })}
                                 </select>
                             )}
                         </div>
@@ -268,10 +311,10 @@ export default function Orders() {
             </div>
 
             {/* REJECT MODAL */}
-            {rejectModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-5">
-                    <div className="absolute inset-0 bg-black/60" onClick={() => setRejectModal(null)} />
-                    <div className="relative card p-6 w-full max-w-md animate-page-in">
+            {rejectModal && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-5">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRejectModal(null)} />
+                    <div className="relative card p-6 w-full max-w-md animate-page-in shadow-2xl">
                         <h2 className="text-xl font-serif mb-4 text-fg">Reject Refund</h2>
                         <form onSubmit={async (e) => {
                             e.preventDefault();
@@ -287,6 +330,31 @@ export default function Orders() {
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => setRejectModal(null)} className="btn-outline">Cancel</button>
                                 <button type="submit" className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Confirm Rejection</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* CANCEL MODAL */}
+            {cancelModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-5">
+                    <div className="absolute inset-0 bg-black/60" onClick={() => setCancelModal(null)} />
+                    <div className="relative card p-6 w-full max-w-md animate-page-in">
+                        <h2 className="text-xl font-serif mb-4 text-fg">Cancel Order</h2>
+                        <form onSubmit={handleCancelSubmit}>
+                            <label className="label-field">Reason for cancellation</label>
+                            <textarea
+                                required rows="4"
+                                value={cancelReason}
+                                onChange={e => setCancelReason(e.target.value)}
+                                className="input-field resize-none mb-4"
+                                placeholder="Explain to the customer why this order is cancelled..."
+                            />
+                            <div className="flex justify-end gap-3">
+                                <button type="button" onClick={() => setCancelModal(null)} className="btn-outline">Cancel</button>
+                                <button type="submit" className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Confirm Cancellation</button>
                             </div>
                         </form>
                     </div>
