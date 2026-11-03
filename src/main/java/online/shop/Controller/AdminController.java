@@ -172,8 +172,8 @@ public class AdminController {
     @PatchMapping("/orders/{id}/status")
     public ResponseEntity<OrderDto> updateOrderStatus(@AuthenticationPrincipal UserDetails ud,
                                                       @PathVariable UUID id,
-                                                      @RequestBody UpdateStatusRequest req) {
-        OrderDto updated = orderService.updateStatus(id, String.valueOf(req.status()));
+                                                      @RequestBody StatusUpdateRequest req) {
+        OrderDto updated = orderService.updateStatus(id, req.status(), req.reason());
         auditService.log(ud.getUsername(), roleOf(ud), "ORDER_STATUS_CHANGED", "ORDER",
                 String.valueOf(id), "Status → " + req.status());
         return ResponseEntity.ok(updated);
@@ -312,4 +312,6 @@ public class AdminController {
                 .map(GrantedAuthority::getAuthority)
                 .orElse("ROLE_SUBADMIN");
     }
+
+    public record StatusUpdateRequest(String status, String reason) {}
 }

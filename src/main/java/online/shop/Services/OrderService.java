@@ -128,18 +128,41 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderDto updateStatus(UUID id, String status) {
+    public OrderDto updateStatus(UUID id, String status, String reason) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
 
-        // FIX: Properly compare the Enum and also block REFUNDED orders
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
             throw ApiException.badRequest("Cancelled or Refunded orders cannot be modified.");
         }
 
-        // FIX: Parse the incoming String into the OrderStatus Enum
-        order.setStatus(OrderStatus.valueOf(status.toUpperCase()));
+        OrderStatus newStatus = OrderStatus.valueOf(status.toUpperCase());
 
+        // Rule: Cannot cancel if already Shipped or Delivered
+        if (newStatus == OrderStatus.CANCELLED &&
+                (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED)) {
+            throw ApiException.badRequest("Cannot cancel an order that is already Shipped or Delivered.");
+        }
+
+        // Rule: Cannot set to REFUNDED unless requested
+        if (newStatus == OrderStatus.REFUNDED && !order.isRefundRequested()) {
+            throw ApiException.badRequest("Cannot mark as refunded without a customer request.");
+        }
+
+        if (newStatus == OrderStatus.CANCELLED) {
+            order.setCancelReason(reason);
+
+            // Restore stock if cancelled by admin
+            for (OrderItem item : order.getItems()) {
+                if (item.getProduct() != null) {
+                    Product p = item.getProduct();
+                    p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
+                    productRepository.save(p);
+                }
+            }
+        }
+
+        order.setStatus(newStatus);
         return toDto(orderRepository.save(order));
     }
 
@@ -177,10 +200,21 @@ public class OrderService {
         if (!order.getUser().getEmail().equalsIgnoreCase(email)) throw ApiException.badRequest("Unauthorized");
         if (order.getStatus() != OrderStatus.DELIVERED) throw ApiException.badRequest("Only delivered orders can be refunded");
         if (order.isRefundRequested()) throw ApiException.badRequest("Refund already requested");
+        if (order.isRefundApproved()) throw ApiException.badRequest("Refund already approved");
 
-        if (order.getDeliveredAt() != null) {
-            long days = java.time.Duration.between(order.getDeliveredAt(), LocalDateTime.now()).toDays();
-            if (days >= 2) throw ApiException.badRequest("Refund window (2 days) has expired");
+        // Check for rejection history to handle re-requests
+        List<OrderRefundLog> logs = order.getRefundLogs();
+        OrderRefundLog lastRejection = logs.stream()
+                .filter(l -> "REJECTED".equals(l.getAction()))
+                .max(java.util.Comparator.comparing(OrderRefundLog::getCreatedAt))
+                .orElse(null);
+
+        if (lastRejection != null) {
+            long daysSinceRejection = java.time.Duration.between(lastRejection.getCreatedAt(), LocalDateTime.now()).toDays();
+            if (daysSinceRejection >= 2) throw ApiException.badRequest("Refund re-request window (2 days) has expired");
+        } else if (order.getDeliveredAt() != null) {
+            long daysSinceDelivery = java.time.Duration.between(order.getDeliveredAt(), LocalDateTime.now()).toDays();
+            if (daysSinceDelivery >= 3) throw ApiException.badRequest("Refund window (3 days) has expired");
         }
 
         order.setRefundRequested(true);
@@ -277,7 +311,7 @@ public class OrderService {
                 o.getUser().getFullName(), o.getUser().getEmail(),
                 o.getCountry(), o.getCity(), o.getZipCode(),
                 o.isRefundRequested(), o.getRefundReason(), o.isRefundApproved(), o.isRefundRejected(), o.getRefundRejectionReason(),
-                logs
+                logs, o.getCancelReason()
         );
     }
 }
