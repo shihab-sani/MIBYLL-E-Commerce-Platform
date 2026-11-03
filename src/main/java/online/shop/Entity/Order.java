@@ -82,4 +82,7 @@ public class Order {
     @OrderBy("createdAt ASC")
     @Builder.Default
     private java.util.List<OrderRefundLog> refundLogs = new java.util.ArrayList<>();
+
+    @Column(length = 1000)
+    private String cancelReason;
 }

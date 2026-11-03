@@ -27,7 +27,7 @@ public class OrderDtos {
             String country, String city, String zipCode,
             boolean refundRequested, String refundReason,
             boolean refundApproved, boolean refundRejected, String refundRejectionReason,
-            List<OrderRefundLogDto> refundLogs
+            List<OrderRefundLogDto> refundLogs, String cancelReason
     ) {}
 
     public record PlaceOrderRequest(
