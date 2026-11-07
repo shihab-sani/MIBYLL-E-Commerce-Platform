@@ -48,6 +48,7 @@ export default function Orders() {
             await api.patch(`/admin/orders/${order.id}/status`, { status, reason: '' })
             toast.success(`Order marked ${status}`)
             load()
+            window.dispatchEvent(new Event('refreshAdminOrderBadge'))
         } catch (err) {
             toast.error(err.response?.data?.message || 'Update failed')
         }
@@ -66,6 +67,7 @@ export default function Orders() {
             setCancelModal(null)
             setCancelReason('')
             load()
+            window.dispatchEvent(new Event('refreshAdminOrderBadge'))
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to cancel')
         }

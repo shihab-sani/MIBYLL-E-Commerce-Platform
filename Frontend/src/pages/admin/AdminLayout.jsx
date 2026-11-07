@@ -24,6 +24,7 @@ export default function AdminLayout() {
     const visibleNav = nav.filter(item => !item.adminOnly || isAdmin)
     const location = useLocation()
     const [unreadRequestsCount, setUnreadRequestsCount] = useState(0)
+    const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
 
     // Extracted fetch logic so it can be called manually
     const fetchUnreadCount = () => {
@@ -35,12 +36,23 @@ export default function AdminLayout() {
             .catch(() => setUnreadRequestsCount(0))
     }
 
+    const fetchPendingOrdersCount = () => {
+        api.get('/admin/orders/count-pending')
+            .then(r => setPendingOrdersCount(r.data))
+            .catch(() => setPendingOrdersCount(0))
+    }
+
     useEffect(() => {
         fetchUnreadCount()
+        fetchPendingOrdersCount()
 
-        // Listen for custom event from Requests.jsx
         window.addEventListener('refreshAdminBadge', fetchUnreadCount)
-        return () => window.removeEventListener('refreshAdminBadge', fetchUnreadCount)
+        window.addEventListener('refreshAdminOrderBadge', fetchPendingOrdersCount) // <-- NEW
+
+        return () => {
+            window.removeEventListener('refreshAdminBadge', fetchUnreadCount)
+            window.removeEventListener('refreshAdminOrderBadge', fetchPendingOrdersCount) // <-- NEW
+        }
     }, [])
 
     return (
@@ -58,9 +70,17 @@ export default function AdminLayout() {
                                      `flex items-center px-4 py-3 text-[11px] uppercase tracking-widest2 transition-colors
                         ${isActive ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}>
                             <span>{item.label}</span>
+                            {/* Existing Requests Badge */}
                             {item.to === '/admin/requests' && unreadRequestsCount > 0 && (
                                 <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
                                     {unreadRequestsCount}
+                                </span>
+                            )}
+
+                            {/* NEW: Orders Badge */}
+                            {item.to === '/admin/orders' && pendingOrdersCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
+                                    {pendingOrdersCount}
                                 </span>
                             )}
                         </NavLink>
