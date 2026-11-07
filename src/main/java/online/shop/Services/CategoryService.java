@@ -210,8 +210,10 @@ public class CategoryService {
                 : List.of();
 
         return new CategoryDto(
-                c.getId(), c.getName(), c.getSlug(), c.getDescription(), c.getImageUrl(), subs
+                c.getId(), c.getName(), c.getSlug(),
+                c.getDescription(), c.getImageUrl(),
+                c.getParent() != null ? c.getParent().getId() : null,
+                subs
         );
     }
-
 }

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public class CategoryDtos {
     public record CategoryDto(
-            UUID id, String name, String slug, String description, String imageUrl,
+            UUID id, String name, String slug, String description, String imageUrl, UUID parentId,
             java.util.List<CategoryDto> subcategories
     ) {}
 
