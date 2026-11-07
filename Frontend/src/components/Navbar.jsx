@@ -18,6 +18,8 @@ export default function Navbar() {
     const [activeCategory, setActiveCategory] = useState(null)
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchValue, setSearchValue] = useState('')
+    const [hoveredCategory, setHoveredCategory] = useState(null)
+    const [hoverTop, setHoverTop] = useState(0)
 
     const [isScrolled, setIsScrolled] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
@@ -35,7 +37,10 @@ export default function Navbar() {
 
     useEffect(() => {
         if (!drawerOpen) {
-            const timer = setTimeout(() => setActiveCategory(null), 500)
+            const timer = setTimeout(() => {
+                setActiveCategory(null);
+                setHoveredCategory(null);
+            }, 500)
             return () => clearTimeout(timer)
         }
     }, [drawerOpen])
@@ -169,6 +174,13 @@ export default function Navbar() {
                                         return (
                                             <button
                                                 key={c.id}
+                                                onMouseEnter={(e) => {
+                                                    setHoveredCategory(c);
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const safeTop = Math.min(rect.top - 20, window.innerHeight - 350);
+                                                    setHoverTop(safeTop);
+                                                }}
+                                                onMouseLeave={() => setHoveredCategory(null)}
                                                 onClick={() => {
                                                     if (hasSubcategories) {
                                                         setActiveCategory(c);
@@ -249,6 +261,7 @@ export default function Navbar() {
                                 <Link
                                     to={`/shop?category=${activeCategory?.slug}`}
                                     onClick={() => setDrawerOpen(false)}
+                                    onMouseLeave={() => setHoveredCategory(null)}
                                     className="block text-center bg-surface border border-c text-fg px-6 py-4 text-xs uppercase tracking-widest2 hover:border-fg transition-colors mb-8"
                                 >
                                     See All {activeCategory?.name}
@@ -260,6 +273,15 @@ export default function Navbar() {
                                             key={sub.slug}
                                             to={`/shop?category=${sub.slug}`}
                                             onClick={() => setDrawerOpen(false)}
+
+                                            onMouseEnter={(e) => {
+                                                setHoveredCategory(sub);
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const safeTop = Math.min(rect.top - 20, window.innerHeight - 350);
+                                                setHoverTop(safeTop);
+                                            }}
+                                            onMouseLeave={() => setHoveredCategory(null)}
+
                                             className="group flex justify-between items-center py-4 pl-4 pr-2 border-b border-c hover:border-fg transition-colors"
                                         >
                                             <span className="text-xs uppercase tracking-widest2 text-fg">
@@ -282,6 +304,38 @@ export default function Navbar() {
 
                     </div>
                 </div>
+                {/* --- FLOATING CATEGORY PREVIEW --- */}
+                {hoveredCategory && drawerOpen && (
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 left-[320px] sm:left-[380px] ml-4 w-[300px] bg-surface border border-c shadow-2xl p-4 animate-fade-in hidden lg:block"
+                        style={{
+                            pointerEvents: 'none',
+                            top: `${hoverTop}px`
+                        }}
+                    >
+                        {hoveredCategory.imageUrl ? (
+                            <div className="w-full aspect-[4/3] bg-sand overflow-hidden mb-4">
+                                <img
+                                    src={hoveredCategory.imageUrl}
+                                    alt={hoveredCategory.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-full aspect-[4/3] bg-sand flex items-center justify-center mb-4">
+                                <span className="text-[10px] text-muted uppercase tracking-widest2">No Image</span>
+                            </div>
+                        )}
+
+                        <h4 className="text-sm font-serif text-fg mb-2 uppercase tracking-wider">
+                            {hoveredCategory.name}
+                        </h4>
+
+                        <p className="text-xs text-muted leading-relaxed line-clamp-4">
+                            {hoveredCategory.description || 'Discover our exclusive collection.'}
+                        </p>
+                    </div>
+                )}
             </div>
         </>
     )
