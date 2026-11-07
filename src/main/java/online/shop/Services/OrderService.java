@@ -279,6 +279,11 @@ public class OrderService {
         return toDto(orderRepository.save(order));
     }
 
+    @Transactional(readOnly = true)
+    public long countPendingOrders() {
+        return orderRepository.countByStatus(OrderStatus.PENDING);
+    }
+
     /* ---- helper: avoid adding another dep just to clear the cart ---- */
     @Autowired
     private CartRepository cartRepository;

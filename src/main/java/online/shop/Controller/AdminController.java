@@ -198,6 +198,11 @@ public class AdminController {
         return ResponseEntity.ok(updated);
     }
 
+    @GetMapping("/orders/count-pending")
+    public ResponseEntity<Long> getPendingOrderCount() {
+        return ResponseEntity.ok(orderService.countPendingOrders());
+    }
+
     /* ============================================================
        BANNERS
        ============================================================ */
