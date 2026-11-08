@@ -25,6 +25,7 @@ export default function AdminLayout() {
     const location = useLocation()
     const [unreadRequestsCount, setUnreadRequestsCount] = useState(0)
     const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
+    const [refundRequestsCount, setRefundRequestsCount] = useState(0)
 
     // Extracted fetch logic so it can be called manually
     const fetchUnreadCount = () => {
@@ -36,6 +37,12 @@ export default function AdminLayout() {
             .catch(() => setUnreadRequestsCount(0))
     }
 
+    const fetchRefundRequestsCount = () => {
+        api.get('/admin/orders/count-refunds')
+            .then(r => setRefundRequestsCount(r.data))
+            .catch(() => setRefundRequestsCount(0))
+    }
+
     const fetchPendingOrdersCount = () => {
         api.get('/admin/orders/count-pending')
             .then(r => setPendingOrdersCount(r.data))
@@ -45,13 +52,20 @@ export default function AdminLayout() {
     useEffect(() => {
         fetchUnreadCount()
         fetchPendingOrdersCount()
+        fetchRefundRequestsCount() // <-- NEW
 
         window.addEventListener('refreshAdminBadge', fetchUnreadCount)
-        window.addEventListener('refreshAdminOrderBadge', fetchPendingOrdersCount) // <-- NEW
+        window.addEventListener('refreshAdminOrderBadge', () => {
+            fetchPendingOrdersCount()
+            fetchRefundRequestsCount() // <-- Refresh refunds too
+        })
 
         return () => {
             window.removeEventListener('refreshAdminBadge', fetchUnreadCount)
-            window.removeEventListener('refreshAdminOrderBadge', fetchPendingOrdersCount) // <-- NEW
+            window.removeEventListener('refreshAdminOrderBadge', () => {
+                fetchPendingOrdersCount()
+                fetchRefundRequestsCount()
+            })
         }
     }, [])
 
@@ -78,9 +92,9 @@ export default function AdminLayout() {
                             )}
 
                             {/* NEW: Orders Badge */}
-                            {item.to === '/admin/orders' && pendingOrdersCount > 0 && (
+                            {item.to === '/admin/orders' && (pendingOrdersCount + refundRequestsCount) > 0 && (
                                 <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
-                                    {pendingOrdersCount}
+                                    {pendingOrdersCount + refundRequestsCount}
                                 </span>
                             )}
                         </NavLink>

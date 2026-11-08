@@ -156,6 +156,11 @@ export default function MyOrders() {
         o.status === 'REFUNDED' || o.refundRejected || o.refundRequested
     )
     const unreadCount = inquiries.filter(i => i.hasUnreadCustomer).length;
+    const unreadOrdersCount = orders.filter(o => o.hasUnreadUpdate).length;
+    const unreadOngoingCount = orders.filter(o => o.hasUnreadUpdate && ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status)).length;
+    const unreadDeliveredCount = orders.filter(o => o.hasUnreadUpdate && o.status === 'DELIVERED').length;
+    const unreadCancelledCount = orders.filter(o => o.hasUnreadUpdate && o.status === 'CANCELLED').length;
+    const unreadRefundedCount = orders.filter(o => o.hasUnreadUpdate && (o.status === 'REFUNDED' || o.refundRejected || o.refundRequested)).length;
 
     // --- REUSABLE UI COMPONENTS ---
     const CartItemCard = ({ item }) => (
@@ -316,18 +321,43 @@ export default function MyOrders() {
 
             {/* TABS */}
             <div className="flex flex-wrap gap-2 mb-10 border-b border-c pb-4">
-                {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)}
-                            className={`relative px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors 
-                            ${tab === t.key ? 'bg-ink text-white border-ink' : 'text-fg border-c hover:border-fg'}`}>
-                        {t.label}
-                        {t.key === 'INQUIRIES' && unreadCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </button>
-                ))}
+                {TABS.map(t => {
+                    // Determine which badge to show based on the tab
+                    let badgeCount = 0;
+                    if (t.key === 'ALL') badgeCount = unreadOrdersCount;
+                    if (t.key === 'ONGOING') badgeCount = unreadOngoingCount;
+                    if (t.key === 'DELIVERED') badgeCount = unreadDeliveredCount;
+                    if (t.key === 'CANCELLED') badgeCount = unreadCancelledCount;
+                    if (t.key === 'REFUNDED') badgeCount = unreadRefundedCount;
+                    if (t.key === 'INQUIRIES') badgeCount = unreadCount; // Existing inquiry count
+
+                    return (
+                        <button key={t.key} onClick={() => {
+                            setTab(t.key);
+                            // Mark orders as read when clicking any order tab
+                            if (t.key !== 'CART' && t.key !== 'INQUIRIES' && unreadOrdersCount > 0) {
+                                api.patch('/orders/read-all').then(() => {
+                                    setOrders(prev => prev.map(o => ({ ...o, hasUnreadUpdate: false })));
+                                });
+                            }
+                            // Existing inquiry read logic
+                            if (t.key === 'INQUIRIES' && unreadCount > 0) {
+                                api.patch('/orders/requests/read-all').then(() => {
+                                    setInquiries(prev => prev.map(i => ({ ...i, hasUnreadCustomer: false })));
+                                });
+                            }
+                        }}
+                                className={`relative px-5 py-2 text-[10px] uppercase tracking-widest2 border transition-colors 
+                                ${tab === t.key ? 'bg-ink text-white border-ink' : 'text-fg border-c hover:border-fg'}`}>
+                            {t.label}
+                            {badgeCount > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                    {badgeCount}
+                                </span>
+                            )}
+                        </button>
+                    )
+                })}
             </div>
 
             {/* --- ALL TAB --- */}

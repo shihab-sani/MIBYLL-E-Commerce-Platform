@@ -222,6 +222,7 @@ export default function Orders() {
                                                                     await api.patch(`/admin/orders/${order.id}/approve-refund`)
                                                                     toast.success('Refund approved')
                                                                     load()
+                                                                    window.dispatchEvent(new Event('refreshAdminOrderBadge'))
                                                                 } catch {
                                                                     toast.error('Failed to approve')
                                                                 }
@@ -325,6 +326,7 @@ export default function Orders() {
                                 await api.patch(`/admin/orders/${rejectModal.orderId}/reject-refund`, { reason: rejectionReason });
                                 toast.success('Refund rejected');
                                 setRejectModal(null); setRejectionReason(''); load();
+                                window.dispatchEvent(new Event('refreshAdminOrderBadge'));
                             } catch { toast.error('Failed to reject'); }
                         }}>
                             <label className="label-field">Reason for rejection</label>
