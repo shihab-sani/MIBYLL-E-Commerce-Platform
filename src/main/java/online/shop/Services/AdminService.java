@@ -106,8 +106,9 @@ public class AdminService {
         for (User c : customers) {
             List<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(c.getId());
 
+            // FIX: Filter out both CANCELLED and REFUNDED orders
             BigDecimal spent = orders.stream()
-                    .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                    .filter(o -> o.getStatus() != OrderStatus.CANCELLED && o.getStatus() != OrderStatus.REFUNDED)
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
