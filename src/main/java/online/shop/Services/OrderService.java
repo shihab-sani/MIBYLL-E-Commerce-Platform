@@ -24,6 +24,7 @@ public class OrderService {
     private final CartService cartService;
     private final SiteSettingsService siteSettingsService;
     private final OrderRefundLogRepository refundLogRepository;
+    private final CartRepository cartRepository;
 
     @Transactional
     public OrderDto placeOrder(String email, PlaceOrderRequest req) {
@@ -108,7 +109,7 @@ public class OrderService {
         Order saved = orderRepository.save(order);
 
         cart.getItems().clear();
-        cartRepositorySave(cart);
+        cartRepository.save(cart);
 
         return toDto(saved);
     }
@@ -152,7 +153,6 @@ public class OrderService {
         if (newStatus == OrderStatus.CANCELLED) {
             order.setCancelReason(reason);
 
-            // Restore stock if cancelled by admin
             for (OrderItem item : order.getItems()) {
                 if (item.getProduct() != null) {
                     Product p = item.getProduct();
@@ -163,6 +163,7 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
+        order.setHasUnreadUpdate(true);
         return toDto(orderRepository.save(order));
     }
 
@@ -237,6 +238,7 @@ public class OrderService {
         order.setRefundRequested(false);
         order.setRefundRejected(false);
         order.setStatus(OrderStatus.REFUNDED);
+        order.setHasUnreadUpdate(true);
 
         OrderRefundLog log = OrderRefundLog.builder()
                 .order(order)
@@ -257,6 +259,7 @@ public class OrderService {
         order.setRefundApproved(false);
         order.setRefundRejected(true);
         order.setRefundRejectionReason(reason);
+        order.setHasUnreadUpdate(true);
 
         refundLogRepository.save(OrderRefundLog.builder().order(order).action("REJECTED").reason(reason).build());
 
@@ -279,17 +282,29 @@ public class OrderService {
         return toDto(orderRepository.save(order));
     }
 
+    @Transactional
+    public void markOrdersAsRead(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow();
+        List<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+
+        boolean updated = false;
+        for (Order o : orders) {
+            if (o.isHasUnreadUpdate()) {
+                o.setHasUnreadUpdate(false);
+                updated = true;
+            }
+        }
+        if (updated) orderRepository.saveAll(orders);
+    }
+
     @Transactional(readOnly = true)
     public long countPendingOrders() {
         return orderRepository.countByStatus(OrderStatus.PENDING);
     }
 
-    /* ---- helper: avoid adding another dep just to clear the cart ---- */
-    @Autowired
-    private CartRepository cartRepository;
-
-    private void cartRepositorySave(Cart cart) {
-        cartRepository.save(cart);
+    @Transactional(readOnly = true)
+    public long countRefundRequests() {
+        return orderRepository.countByRefundRequestedTrue();
     }
 
     public OrderDto toDto(Order o) {
@@ -316,7 +331,7 @@ public class OrderService {
                 o.getUser().getFullName(), o.getUser().getEmail(),
                 o.getCountry(), o.getCity(), o.getZipCode(),
                 o.isRefundRequested(), o.getRefundReason(), o.isRefundApproved(), o.isRefundRejected(), o.getRefundRejectionReason(),
-                logs, o.getCancelReason()
+                logs, o.getCancelReason(), o.isHasUnreadUpdate()
         );
     }
 }

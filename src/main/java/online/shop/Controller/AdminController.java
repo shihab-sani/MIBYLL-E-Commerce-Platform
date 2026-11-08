@@ -203,6 +203,11 @@ public class AdminController {
         return ResponseEntity.ok(orderService.countPendingOrders());
     }
 
+    @GetMapping("/orders/count-refunds")
+    public ResponseEntity<Long> getRefundRequestCount() {
+        return ResponseEntity.ok(orderService.countRefundRequests());
+    }
+
     /* ============================================================
        BANNERS
        ============================================================ */
