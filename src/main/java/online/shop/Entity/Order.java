@@ -85,4 +85,8 @@ public class Order {
 
     @Column(length = 1000)
     private String cancelReason;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean hasUnreadUpdate = false;
 }

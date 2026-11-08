@@ -83,4 +83,10 @@ public class OrderController {
         requestService.closeRequest(id);
         return ResponseEntity.ok().build();
     }
+
+    @PatchMapping("/read-all")
+    public ResponseEntity<Void> marksAllRead(@AuthenticationPrincipal UserDetails ud) {
+        orderService.markOrdersAsRead(ud.getUsername());
+        return ResponseEntity.ok().build();
+    }
 }
