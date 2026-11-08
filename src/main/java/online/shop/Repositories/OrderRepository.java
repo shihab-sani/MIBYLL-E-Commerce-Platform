@@ -13,4 +13,5 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findByUserIdOrderByCreatedAtDesc(UUID userId);
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
     long countByStatus(OrderStatus status);
+    long countByRefundRequestedTrue();
 }
