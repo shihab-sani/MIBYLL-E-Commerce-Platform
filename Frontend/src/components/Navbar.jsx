@@ -25,6 +25,7 @@ export default function Navbar() {
     const [isHovered, setIsHovered] = useState(false)
 
     const searchRef = useRef(null)
+    const hoverTimeout = useRef(null)
 
     useEffect(() => {
         api.get('/categories').then(r => setCategories(r.data)).catch(() => {})
@@ -76,6 +77,20 @@ export default function Navbar() {
         navigate(`/shop?q=${encodeURIComponent(q)}`)
     }
 
+    const handleMouseEnter = (category, e) => {
+        if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
+        setHoveredCategory(category)
+        const rect = e.currentTarget.getBoundingClientRect()
+        const safeTop = Math.min(rect.top - 20, window.innerHeight - 350)
+        setHoverTop(safeTop)
+    }
+
+    const handleMouseLeave = () => {
+        hoverTimeout.current = setTimeout(() => {
+            setHoveredCategory(null)
+        }, 150)
+    }
+
     const isSolid = isScrolled || isHovered
 
     return (
@@ -84,60 +99,75 @@ export default function Navbar() {
             <header
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`fixed top-0 left-0 w-full z-[100] transition-colors duration-300 transform-gpu will-change-transform ${
-                    isSolid
-                        ? 'bg-[#050510] text-white shadow-xl'
-                        : 'bg-transparent text-white' 
+                className={`fixed top-0 left-0 w-full z-[110] transition-colors duration-300 transform-gpu will-change-transform ${
+                    drawerOpen
+                        ? 'bg-transparent' // <-- Transparent when drawer is open
+                        : isSolid
+                            ? 'bg-[#050510] text-white shadow-xl'
+                            : 'bg-transparent text-white'
                 }`}
             >
                 <div className="max-w-[1500px] mx-auto px-5 lg:px-10">
-                    {/* 3. Increased fixed height to h-20 lg:h-24 to compensate for the removed padding */}
                     <div className="grid grid-cols-3 items-center h-20 lg:h-24">
                         <div className="flex justify-start">
-                            <button onClick={() => setDrawerOpen(true)} aria-label="Menu" className="hover:opacity-60 transition-opacity">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                                    <path d="M8 4v16M16 4v16" />
-                                </svg>
+                            <button
+                                onClick={() => setDrawerOpen(!drawerOpen)}
+                                aria-label="Menu"
+                                className="hover:opacity-60 transition-opacity p-2 -ml-2 focus:outline-none" // <-- Added focus:outline-none
+                            >
+                                <div className="w-6 h-5 relative flex flex-col justify-between">
+                                    <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 origin-center ${drawerOpen ? 'absolute top-1/2 -translate-y-1/2 rotate-45' : 'absolute top-0'}`} />
+                                    <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 ${drawerOpen ? 'opacity-0 absolute top-1/2 -translate-y-1/2' : 'absolute top-1/2 -translate-y-1/2'}`} />
+                                    <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 origin-center ${drawerOpen ? 'absolute top-1/2 -translate-y-1/2 -rotate-45' : 'absolute bottom-0'}`} />
+                                </div>
                             </button>
                         </div>
 
                         <div className="flex justify-center">
-                            <Link to="/" className="text-2xl lg:text-3xl font-serif tracking-[0.35em] uppercase">
-                                Mibyll
-                            </Link>
+                            {/* HIDE LOGO WHEN DRAWER IS OPEN */}
+                            {!drawerOpen && (
+                                <Link to="/" className="text-2xl lg:text-3xl font-serif tracking-[0.35em] uppercase">
+                                    Mibyll
+                                </Link>
+                            )}
                         </div>
 
                         <div className="flex justify-end items-center gap-6">
-                            <div className="relative" ref={searchRef}>
-                                <button onClick={() => setSearchOpen(v => !v)} aria-label="Search" className="hover:opacity-60 transition-opacity">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                                        <circle cx="11" cy="11" r="7" />
-                                        <path d="m20 20-3.5-3.5" />
-                                    </svg>
-                                </button>
-                                {searchOpen && (
-                                    <form onSubmit={submitSearch} className="absolute top-full right-0 mt-6 w-[min(90vw,360px)] border border-white/20 bg-black/95 text-white shadow-2xl backdrop-blur-md animate-fade-in">
-                                        <input
-                                            autoFocus
-                                            value={searchValue}
-                                            onChange={e => setSearchValue(e.target.value)}
-                                            placeholder="Search products…"
-                                            className="w-full px-5 py-4 text-sm bg-transparent focus:outline-none placeholder:text-gray-400"
-                                        />
-                                    </form>
-                                )}
-                            </div>
-                            <Link to={isAuthenticated ? "/orders" : "/cart"} className="relative hover:opacity-60 transition-opacity">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                                    <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
-                                </svg>
-                                {cart?.totalItems > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-white text-red-600 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                                        {cart.totalItems}
-                                    </span>
-                                )}
-                            </Link>
+                            {/* HIDE ICONS WHEN DRAWER IS OPEN */}
+                            {!drawerOpen && (
+                                <>
+                                    <div className="relative" ref={searchRef}>
+                                        <button onClick={() => setSearchOpen(v => !v)} aria-label="Search" className="hover:opacity-60 transition-opacity">
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                                <circle cx="11" cy="11" r="7" />
+                                                <path d="m20 20-3.5-3.5" />
+                                            </svg>
+                                        </button>
+                                        {searchOpen && (
+                                            <form onSubmit={submitSearch} className="absolute top-full right-0 mt-6 w-[min(90vw,360px)] border border-white/20 bg-black/95 text-white shadow-2xl backdrop-blur-md animate-fade-in">
+                                                <input
+                                                    autoFocus
+                                                    value={searchValue}
+                                                    onChange={e => setSearchValue(e.target.value)}
+                                                    placeholder="Search products…"
+                                                    className="w-full px-5 py-4 text-sm bg-transparent focus:outline-none placeholder:text-gray-400"
+                                                />
+                                            </form>
+                                        )}
+                                    </div>
+                                    <Link to={isAuthenticated ? "/orders" : "/cart"} className="relative hover:opacity-60 transition-opacity">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                            <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
+                                        </svg>
+                                        {cart?.totalItems > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-white text-red-600 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                                                {cart.totalItems}
+                                            </span>
+                                        )}
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -145,10 +175,8 @@ export default function Navbar() {
 
             {/* MULTI-TIER SLIDING DRAWER */}
             <div className={`fixed inset-0 z-[100] transition-opacity duration-300 ${drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                {/* Backdrop */}
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
 
-                {/* Main Drawer Container */}
                 <div className={`absolute left-0 top-0 h-full w-[320px] sm:w-[380px] bg-surface shadow-2xl overflow-hidden
                                 transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
@@ -157,12 +185,10 @@ export default function Navbar() {
 
                         {/* --- PANEL 1: MAIN MENU --- */}
                         <div className="absolute top-0 left-0 w-full h-full flex flex-col bg-surface text-fg">
-                            <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
-                                <button onClick={() => setDrawerOpen(false)} className="hover:opacity-50 transition-opacity text-fg">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                                        <path d="M18 6L6 18M6 6l12 12" />
-                                    </svg>
-                                </button>
+
+                            {/* Aligned header height with main header */}
+                            <div className="flex items-center justify-between px-8 h-20 lg:h-24 border-b border-c shrink-0">
+                                <div className="w-6 h-6"></div>
                                 <span className="text-xl font-serif tracking-[0.2em] uppercase text-fg">Menu</span>
                                 <div className="w-6"></div>
                             </div>
@@ -174,13 +200,8 @@ export default function Navbar() {
                                         return (
                                             <button
                                                 key={c.id}
-                                                onMouseEnter={(e) => {
-                                                    setHoveredCategory(c);
-                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                    const safeTop = Math.min(rect.top - 20, window.innerHeight - 350);
-                                                    setHoverTop(safeTop);
-                                                }}
-                                                onMouseLeave={() => setHoveredCategory(null)}
+                                                onMouseEnter={(e) => handleMouseEnter(c, e)}
+                                                onMouseLeave={handleMouseLeave}
                                                 onClick={() => {
                                                     if (hasSubcategories) {
                                                         setActiveCategory(c);
@@ -200,6 +221,12 @@ export default function Navbar() {
                                             </button>
                                         );
                                     })}
+                                    <div className="mt-8 px-8 flex flex-col gap-4">
+                                        <h3 className="text-[10px] text-muted uppercase tracking-widest border-b border-c pb-2">Discover</h3>
+                                        <Link to="/coffer" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm uppercase tracking-widest2">
+                                            The History of the House
+                                        </Link>
+                                    </div>
                                 </nav>
 
                                 <div className="mt-12 px-8 pb-12 flex flex-col gap-6">
@@ -240,7 +267,9 @@ export default function Navbar() {
 
                         {/* --- PANEL 2: SUBCATEGORIES --- */}
                         <div className="absolute top-0 left-full w-full h-full flex flex-col bg-surface text-fg">
-                            <div className="flex items-center justify-between px-8 h-20 border-b border-c shrink-0">
+
+                            {/* Aligned header height with main header */}
+                            <div className="flex items-center justify-between px-8 h-20 lg:h-24 border-b border-c shrink-0">
                                 <button onClick={() => setActiveCategory(null)} className="flex items-center gap-2 hover:opacity-50 transition-opacity text-fg text-xs uppercase tracking-wider font-medium">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M15 18l-6-6 6-6"/>
@@ -250,18 +279,14 @@ export default function Navbar() {
                                 <span className="text-lg font-serif tracking-[0.2em] uppercase text-fg">
                                     {activeCategory?.name || 'Category'}
                                 </span>
-                                <button onClick={() => setDrawerOpen(false)} className="hover:opacity-50 transition-opacity text-fg">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                                        <path d="M18 6L6 18M6 6l12 12" />
-                                    </svg>
-                                </button>
+                                <div className="w-6" /> {/* Spacer to keep center alignment */}
                             </div>
 
                             <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
                                 <Link
                                     to={`/shop?category=${activeCategory?.slug}`}
                                     onClick={() => setDrawerOpen(false)}
-                                    onMouseLeave={() => setHoveredCategory(null)}
+                                    onMouseLeave={handleMouseLeave}
                                     className="block text-center bg-surface border border-c text-fg px-6 py-4 text-xs uppercase tracking-widest2 hover:border-fg transition-colors mb-8"
                                 >
                                     See All {activeCategory?.name}
@@ -273,15 +298,8 @@ export default function Navbar() {
                                             key={sub.slug}
                                             to={`/shop?category=${sub.slug}`}
                                             onClick={() => setDrawerOpen(false)}
-
-                                            onMouseEnter={(e) => {
-                                                setHoveredCategory(sub);
-                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                const safeTop = Math.min(rect.top - 20, window.innerHeight - 350);
-                                                setHoverTop(safeTop);
-                                            }}
-                                            onMouseLeave={() => setHoveredCategory(null)}
-
+                                            onMouseEnter={(e) => handleMouseEnter(sub, e)}
+                                            onMouseLeave={handleMouseLeave}
                                             className="group flex justify-between items-center py-4 pl-4 pr-2 border-b border-c hover:border-fg transition-colors"
                                         >
                                             <span className="text-xs uppercase tracking-widest2 text-fg">
