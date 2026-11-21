@@ -56,8 +56,9 @@ public class ReviewService {
         ProductReview review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> ApiException.notFound("Review not found"));
 
+        // SECURITY CHECK: Ensure the logged-in user is the owner of the review
         if (!review.getUser().getEmail().equalsIgnoreCase(email)) {
-            throw ApiException.badRequest("You can only edit your own reviews");
+            throw ApiException.badRequest("Unauthorized: You can only edit your own reviews.");
         }
 
         if (req.rating() < 1 || req.rating() > 5) throw ApiException.badRequest("Rating must be between 1 and 5");
@@ -74,8 +75,9 @@ public class ReviewService {
         ProductReview review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> ApiException.notFound("Review not found"));
 
+        // SECURITY CHECK: Ensure the logged-in user is the owner of the review
         if (!review.getUser().getEmail().equalsIgnoreCase(email)) {
-            throw ApiException.badRequest("You can only delete your own reviews");
+            throw ApiException.badRequest("Unauthorized: You can only delete your own reviews.");
         }
 
         reviewRepository.delete(review);
