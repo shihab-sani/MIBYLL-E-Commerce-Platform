@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
+import { useWishlist } from '../context/WishlistContext'
 import ThemeToggle from './ThemeToggle'
 import api from '../api/axios'
 
@@ -10,6 +11,7 @@ export default function Navbar() {
     const { user, logout, isAdminPanelUser, isAuthenticated } = useAuth()
     const { cart } = useCart()
     const { country, countries, setCountry } = useLocalization()
+    const { wishlistIds } = useWishlist()
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -136,9 +138,9 @@ export default function Navbar() {
                             {/* HIDE ICONS WHEN DRAWER IS OPEN */}
                             {!drawerOpen && (
                                 <>
-                                    <div className="relative" ref={searchRef}>
-                                        <button onClick={() => setSearchOpen(v => !v)} aria-label="Search" className="hover:opacity-60 transition-opacity">
-                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                    <div className="relative flex items-center" ref={searchRef}>
+                                        <button onClick={() => setSearchOpen(v => !v)} aria-label="Search" className="hover:opacity-60 transition-opacity flex items-center justify-center">
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="block">
                                                 <circle cx="11" cy="11" r="7" />
                                                 <path d="m20 20-3.5-3.5" />
                                             </svg>
@@ -155,8 +157,20 @@ export default function Navbar() {
                                             </form>
                                         )}
                                     </div>
-                                    <Link to={isAuthenticated ? "/orders" : "/cart"} className="relative hover:opacity-60 transition-opacity">
-                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+
+                                    <Link to="/wishlist" className="relative hover:opacity-60 transition-opacity flex items-center justify-center">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="block">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                        </svg>
+                                        {wishlistIds?.length > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-white text-red-600 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                                                {wishlistIds.length}
+                                            </span>
+                                        )}
+                                    </Link>
+
+                                    <Link to={isAuthenticated ? "/orders" : "/cart"} className="relative hover:opacity-60 transition-opacity flex items-center justify-center">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="block">
                                             <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                                             <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
                                         </svg>
