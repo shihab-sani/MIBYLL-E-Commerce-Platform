@@ -396,8 +396,9 @@ export default function ProductDetail() {
                     {/* Reviews List */}
                     <div>
                         {reviews.map((review) => {
-                            // Check if this review belongs to the logged-in user
-                            const isMyReview = user?.email === review.userEmail;
+                            // STRICT CHECK: User must be logged in, have an email, and match the review's email
+                            const isMyReview = user && user.email && review.userEmail &&
+                                user.email.toLowerCase() === review.userEmail.toLowerCase();
 
                             return (
                                 <div key={review.id} className="border-b border-c pb-6">
@@ -405,8 +406,8 @@ export default function ProductDetail() {
                                         <div className="flex items-center gap-3">
                                             <span className="text-sm font-medium text-fg">{review.userName}</span>
                                             <span className="text-[10px] uppercase tracking-widest2 text-muted">
-                                                        {new Date(review.createdAt).toLocaleDateString()}
-                                                    </span>
+                                                {new Date(review.createdAt).toLocaleDateString()}
+                                            </span>
                                         </div>
 
                                         <div className="flex items-center gap-4">
@@ -426,11 +427,21 @@ export default function ProductDetail() {
                                                 ))}
                                             </div>
 
-                                            {/* Edit / Delete Options */}
+                                            {/* Edit / Delete Options (Only visible to the owner) */}
                                             {isMyReview && (
                                                 <div className="flex gap-2 ml-4 border-l border-c pl-4">
-                                                    <button onClick={() => handleEditClick(review)} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">Edit</button>
-                                                    <button onClick={() => handleDeleteClick(review.id)} className="text-[10px] uppercase tracking-widest2 text-red-500 hover:underline">Delete</button>
+                                                    <button
+                                                        onClick={() => handleEditClick(review)}
+                                                        className="text-[10px] uppercase tracking-widest2 text-fg hover:underline"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(review.id)}
+                                                        className="text-[10px] uppercase tracking-widest2 text-red-500 hover:underline"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -438,7 +449,7 @@ export default function ProductDetail() {
 
                                     <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">{review.comment}</p>
 
-                                    {/* Images (keep existing code) */}
+                                    {/* Images */}
                                     {review.imageUrls && review.imageUrls.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-3">
                                             {review.imageUrls.map((url, idx) => (
