@@ -5,6 +5,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
+import { WishlistProvider } from './context/WishlistContext'
 
 import Home from './pages/Home'
 import Shop from './pages/Shop'
@@ -15,6 +16,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import MyOrders from './pages/MyOrders'
 import Profile from './pages/Profile'
+import Wishlist from './pages/Wishlist'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
@@ -36,21 +38,17 @@ import Coffer from './pages/Coffer'
 function ScrollToTop() {
     const { pathname } = useLocation()
     useEffect(() => {
-        // Scroll the main window
         window.scrollTo(0, 0)
-
-        // Scroll the admin panel container
         const adminContainer = document.getElementById('admin-scroll-container');
-        if (adminContainer) {
-            adminContainer.scrollTo(0, 0);
-        }
+        if (adminContainer) adminContainer.scrollTo(0, 0);
     }, [pathname])
     return null
 }
 
 export default function App() {
     return (
-        <>
+        // WRAP THE ENTIRE APP HERE
+        <WishlistProvider>
             <ScrollToTop />
             <Routes>
                 {/* ADMIN — separate layout */}
@@ -72,7 +70,7 @@ export default function App() {
                     <Route path="coffer" element={<AdminCoffer />} />
                 </Route>
 
-                {/* CUSTOMER — standard layout (Navbar is always visible) */}
+                {/* CUSTOMER — standard layout */}
                 <Route path="*" element={
                      <div className="min-h-screen flex flex-col">
                         <Navbar />
@@ -83,7 +81,7 @@ export default function App() {
                     </div>
                 } />
             </Routes>
-        </>
+        </WishlistProvider>
     )
 }
 
@@ -101,6 +99,7 @@ function AnimatedRoutes() {
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+                <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} /> {/* <-- ADDED HERE */}
                 <Route path="/coffer" element={<Coffer />} />
                 <Route path="*" element={
                      <div className="py-40 text-center">
