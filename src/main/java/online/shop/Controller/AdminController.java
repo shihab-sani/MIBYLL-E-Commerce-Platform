@@ -2,6 +2,7 @@ package online.shop.Controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import online.shop.DTOs.CofferDtos;
 import online.shop.DTOs.CustomerDtos.*;
 import online.shop.DTOs.CategoryDtos.*;
 import online.shop.DTOs.DashboardDto.*;
@@ -32,6 +33,7 @@ public class AdminController {
     private final AuditService auditService;
     private final SiteSettingsService siteSettingsService;
     private final RequestService requestService;
+    private final CofferService cofferService;
 
     /* ---------------- DASHBOARD ---------------- */
 
@@ -312,6 +314,31 @@ public class AdminController {
         SiteSettings updated = siteSettingsService.update(req);
         auditService.log(ud.getUsername(), roleOf(ud), "FOOTER_UPDATED", "SITE", "1", null);
         return ResponseEntity.ok(updated);
+    }
+
+    /* ============================================================
+       COFFER
+       ============================================================ */
+
+    @GetMapping("/coffer")
+    public ResponseEntity<List<CofferDtos.CofferDto>> allCoffer() {
+        return ResponseEntity.ok(cofferService.getAll());
+    }
+
+    @PostMapping("/coffer")
+    public ResponseEntity<CofferDtos.CofferDto> createCoffer(@RequestBody CofferDtos.CofferRequest req) {
+        return ResponseEntity.ok(cofferService.create(req));
+    }
+
+    @PutMapping("/coffer/{id}")
+    public ResponseEntity<CofferDtos.CofferDto> updateCoffer(@PathVariable UUID id, @RequestBody CofferDtos.CofferRequest req) {
+        return ResponseEntity.ok(cofferService.update(id, req));
+    }
+
+    @DeleteMapping("/coffer/{id}")
+    public ResponseEntity<Void> deleteCoffer(@PathVariable UUID id) {
+        cofferService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     /* ---------------- helper ---------------- */
