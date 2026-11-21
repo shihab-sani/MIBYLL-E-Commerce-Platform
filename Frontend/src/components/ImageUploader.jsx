@@ -8,9 +8,10 @@ export default function ImageUploader({
                                           value = [],
                                           onChange,
                                           multiple = true,
-                                          accept = 'image/*',                 // ← NEW: pass 'image/*,video/*' to allow videos
+                                          accept = 'image/*',
                                           label = 'Click or drop images here',
                                           hint,
+                                          uploadUrl = '/admin/upload', // <-- 1. ADD THIS PROP (Defaults to admin for safety)
                                       }) {
     const inputRef = useRef(null)
     const [uploading, setUploading] = useState(false)
@@ -23,7 +24,10 @@ export default function ImageUploader({
             for (const file of files) {
                 const fd = new FormData()
                 fd.append('file', file)
-                const { data } = await api.post('/admin/upload', fd)
+
+                // 2. USE THE PROP INSTEAD OF HARDCODED URL
+                const { data } = await api.post(uploadUrl, fd)
+
                 urls.push(data.url)
             }
             onChange(multiple ? [...value, ...urls] : urls.slice(0, 1))

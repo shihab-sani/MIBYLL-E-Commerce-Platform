@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import ImageUploader from '../components/ImageUploader'
 import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
@@ -11,8 +12,14 @@ export default function ProductDetail() {
     const { slug } = useParams()
     const { formatPrice } = useLocalization()
     const navigate = useNavigate()
-    const { isAuthenticated } = useAuth()
+    const { user, isAuthenticated } = useAuth()
     const { addToCart } = useCart()
+    const [reviews, setReviews] = useState([])
+    const [rating, setRating] = useState(5)
+    const [reviewImages, setReviewImages] = useState([])
+    const [comment, setComment] = useState('')
+    const [submittingReview, setSubmittingReview] = useState(false)
+    const [editingReviewId, setEditingReviewId] = useState(null)
 
     const [product, setProduct] = useState(null)
     const [related, setRelated] = useState([])
@@ -49,6 +56,8 @@ export default function ProductDetail() {
                 setSize('')
                 setSelectedVariant(null)
 
+                api.get(`/products/${slug}/reviews`).then(res => setReviews(res.data)).catch(() => {})
+
                 api.get(`/products/${slug}/related`)
                     .then(res => setRelated(res.data))
                     .catch(() => {})
@@ -79,6 +88,68 @@ export default function ProductDetail() {
         } catch (e) {
             toast.error(e.response?.data?.message || 'Could not add to bag')
         } finally { setAdding(false) }
+    }
+
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault()
+        if (!isAuthenticated) {
+            toast.error('Please sign in to leave a review')
+            return
+        }
+        setSubmittingReview(true)
+        try {
+            const payload = { rating, comment, imageUrls: reviewImages }
+
+            if (editingReviewId) {
+                // Update existing review
+                await api.put(`/products/${slug}/reviews/${editingReviewId}`, payload)
+                toast.success('Your review has been updated.')
+            } else {
+                // Create new review
+                await api.post(`/products/${slug}/reviews`, payload)
+                toast.success('Thank you! Your review has been submitted.')
+            }
+
+            setComment('')
+            setRating(5)
+            setReviewImages([])
+            setEditingReviewId(null) // Reset edit state
+
+            // Refresh reviews
+            api.get(`/products/${slug}/reviews`).then(res => setReviews(res.data))
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to submit review')
+        } finally {
+            setSubmittingReview(false)
+        }
+    }
+
+    const handleEditClick = (review) => {
+        setEditingReviewId(review.id)
+        setRating(review.rating)
+        setComment(review.comment)
+        setReviewImages(review.imageUrls || [])
+
+        // Scroll to the review form
+        document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    const handleCancelEdit = () => {
+        setEditingReviewId(null)
+        setRating(5)
+        setComment('')
+        setReviewImages([])
+    }
+
+    const handleDeleteClick = async (reviewId) => {
+        if (!window.confirm('Are you sure you want to delete this review?')) return
+        try {
+            await api.delete(`/products/${slug}/reviews/${reviewId}`)
+            toast.success('Review deleted.')
+            api.get(`/products/${slug}/reviews`).then(res => setReviews(res.data))
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete review')
+        }
     }
 
     if (loading) {
@@ -243,6 +314,157 @@ export default function ProductDetail() {
                     <AboutUsPanel open={shippingOpen} onClose={() => setShippingOpen(false)} title="Shipping & Returns Policy" content={shippingPolicy} />
                 </div>
             </div>
+
+            {/* --- CUSTOMER REVIEWS SECTION --- */}
+            <section className="mt-24 pt-12 border-t border-neutral-200">
+                <h2 className="text-2xl md:text-3xl font-serif text-fg mb-10 text-center">Customer Reviews</h2>
+
+                <div className="grid lg:grid-cols-[1fr_2fr] gap-12 lg:gap-24">
+
+                    {/* Write a Review Form */}
+                    <div id="review-form" className="bg-surface border border-c p-6 md:p-8 h-fit relative">
+                        <h3 className="text-[11px] uppercase tracking-widest2 text-fg mb-6">
+                            {editingReviewId ? 'Edit Your Review' : 'Write a Review'}
+                        </h3>
+
+                        <form onSubmit={handleReviewSubmit}>
+
+                            {/* Star Rating Selector */}
+                            <div className="mb-6">
+                                <label className="label-field mb-2">Rating</label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRating(star)}
+                                            className="focus:outline-none transition-transform hover:scale-110"
+                                        >
+                                            <svg
+                                                width="24" height="24" viewBox="0 0 24 24"
+                                                fill={star <= rating ? "#C5A880" : "none"}
+                                                stroke={star <= rating ? "#C5A880" : "currentColor"}
+                                                strokeWidth="1"
+                                                className={star <= rating ? "" : "text-neutral-300"}
+                                            >
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                            </svg>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="label-field">Your Review</label>
+                                <textarea
+                                    required
+                                    rows="4"
+                                    value={comment}
+                                    onChange={e => setComment(e.target.value)}
+                                    className="input-field resize-none"
+                                    placeholder="Share your thoughts about this piece..."
+                                />
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="label-field">Add Photos (Optional)</label>
+                                <ImageUploader
+                                    value={reviewImages}
+                                    onChange={(urls) => setReviewImages(urls)}
+                                    multiple={true}
+                                    uploadUrl="/upload"
+                                />
+                            </div>
+
+                            <button type="submit" disabled={submittingReview} className="btn-primary w-full">
+                                {submittingReview ? 'Submitting...' : editingReviewId ? 'Update Review' : 'Submit Review'}
+                            </button>
+
+                            {/* Cancel Edit Button */}
+                            {editingReviewId && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="btn-outline w-full mt-3"
+                                >
+                                    Cancel Edit
+                                </button>
+                            )}
+                        </form>
+                    </div>
+
+                    {/* Reviews List */}
+                    <div>
+                        {reviews.map((review) => {
+                            // Check if this review belongs to the logged-in user
+                            const isMyReview = user?.email === review.userEmail;
+
+                            return (
+                                <div key={review.id} className="border-b border-c pb-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-medium text-fg">{review.userName}</span>
+                                            <span className="text-[10px] uppercase tracking-widest2 text-muted">
+                                                        {new Date(review.createdAt).toLocaleDateString()}
+                                                    </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-4">
+                                            {/* Stars */}
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <svg
+                                                        key={star}
+                                                        width="14" height="14" viewBox="0 0 24 24"
+                                                        fill={star <= review.rating ? "#C5A880" : "none"}
+                                                        stroke={star <= review.rating ? "#C5A880" : "currentColor"}
+                                                        strokeWidth="1"
+                                                        className={star <= review.rating ? "" : "text-neutral-300"}
+                                                    >
+                                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                                    </svg>
+                                                ))}
+                                            </div>
+
+                                            {/* Edit / Delete Options */}
+                                            {isMyReview && (
+                                                <div className="flex gap-2 ml-4 border-l border-c pl-4">
+                                                    <button onClick={() => handleEditClick(review)} className="text-[10px] uppercase tracking-widest2 text-fg hover:underline">Edit</button>
+                                                    <button onClick={() => handleDeleteClick(review.id)} className="text-[10px] uppercase tracking-widest2 text-red-500 hover:underline">Delete</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">{review.comment}</p>
+
+                                    {/* Images (keep existing code) */}
+                                    {review.imageUrls && review.imageUrls.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-3">
+                                            {review.imageUrls.map((url, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block w-16 h-16 md:w-20 md:h-20 border border-c bg-sand overflow-hidden hover:opacity-80 transition-opacity"
+                                                >
+                                                    <img
+                                                        src={url}
+                                                        alt={`Review image ${idx + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                </div>
+            </section>
 
             {related.length > 0 && (
                 <section className="mt-24 pt-12 border-t border-neutral-200">
