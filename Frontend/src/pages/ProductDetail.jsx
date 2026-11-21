@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
 import AboutUsPanel from '../components/AboutUsPanel'
+import { useWishlist } from '../context/WishlistContext'
 
 export default function ProductDetail() {
     const { slug } = useParams()
@@ -14,13 +15,8 @@ export default function ProductDetail() {
     const navigate = useNavigate()
     const { user, isAuthenticated } = useAuth()
     const { addToCart } = useCart()
-    const [reviews, setReviews] = useState([])
-    const [rating, setRating] = useState(5)
-    const [reviewImages, setReviewImages] = useState([])
-    const [comment, setComment] = useState('')
-    const [submittingReview, setSubmittingReview] = useState(false)
-    const [editingReviewId, setEditingReviewId] = useState(null)
 
+    // 1. Move ALL state declarations to the top
     const [product, setProduct] = useState(null)
     const [related, setRelated] = useState([])
     const [activeImage, setActiveImage] = useState(0)
@@ -31,6 +27,17 @@ export default function ProductDetail() {
     const [adding, setAdding] = useState(false)
     const [shippingPolicy, setShippingPolicy] = useState('')
     const [shippingOpen, setShippingOpen] = useState(false)
+
+    const [reviews, setReviews] = useState([])
+    const [rating, setRating] = useState(5)
+    const [reviewImages, setReviewImages] = useState([])
+    const [comment, setComment] = useState('')
+    const [submittingReview, setSubmittingReview] = useState(false)
+    const [editingReviewId, setEditingReviewId] = useState(null)
+
+    // 2. Now safely use the Wishlist context
+    const { isInWishlist, toggleWishlist } = useWishlist()
+    const isSaved = isInWishlist(product?.id)
 
     // Helper to get available sizes based on Admin's selection
     const getSizes = (type) => {
@@ -101,11 +108,9 @@ export default function ProductDetail() {
             const payload = { rating, comment, imageUrls: reviewImages }
 
             if (editingReviewId) {
-                // Update existing review
                 await api.put(`/products/${slug}/reviews/${editingReviewId}`, payload)
                 toast.success('Your review has been updated.')
             } else {
-                // Create new review
                 await api.post(`/products/${slug}/reviews`, payload)
                 toast.success('Thank you! Your review has been submitted.')
             }
@@ -113,9 +118,8 @@ export default function ProductDetail() {
             setComment('')
             setRating(5)
             setReviewImages([])
-            setEditingReviewId(null) // Reset edit state
+            setEditingReviewId(null)
 
-            // Refresh reviews
             api.get(`/products/${slug}/reviews`).then(res => setReviews(res.data))
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to submit review')
@@ -129,8 +133,6 @@ export default function ProductDetail() {
         setRating(review.rating)
         setComment(review.comment)
         setReviewImages(review.imageUrls || [])
-
-        // Scroll to the review form
         document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })
     }
 
@@ -190,7 +192,7 @@ export default function ProductDetail() {
                                     key={i}
                                     onClick={() => {
                                         setActiveImage(i);
-                                        setSelectedVariant(null); // Clear variant if they click a normal image
+                                        setSelectedVariant(null);
                                     }}
                                     className={`aspect-[3/4] overflow-hidden border transition-colors ${
                                         (!selectedVariant && activeImage === i) ? 'border-fg' : 'border-transparent'
@@ -246,8 +248,8 @@ export default function ProductDetail() {
                                         onClick={() => setSelectedVariant(v)}
                                         className={`w-16 h-16 border-2 overflow-hidden transition-all duration-200 ${
                                             selectedVariant?.id === v.id
-                                                ? 'border-fg scale-105 shadow-md' // Highlight selected
-                                                : 'border-c hover:border-fg'      // Normal state
+                                                ? 'border-fg scale-105 shadow-md'
+                                                : 'border-c hover:border-fg'
                                         }`}
                                         title={v.name}
                                     >
@@ -297,12 +299,26 @@ export default function ProductDetail() {
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex gap-3 mt-8">
                         <button onClick={() => handleAdd(false)} disabled={soldOut || adding} className="btn-primary flex-1">
                             {adding ? 'Adding…' : 'Add to Bag'}
                         </button>
-                        <button onClick={() => handleAdd(true)} disabled={soldOut || adding} className="btn-outline flex-1">
-                            Buy Now
+                        <button
+                            onClick={() => toggleWishlist(product.id)}
+                            className={`w-12 h-12 shrink-0 flex items-center justify-center border transition-colors ${
+                                isSaved ? 'border-[#C5A880]' : 'border-c hover:border-fg'
+                            }`}
+                            title={isSaved ? "Remove from Wishlist" : "Add to Wishlist"}
+                        >
+                            <svg
+                                width="20" height="20" viewBox="0 0 24 24"
+                                fill={isSaved ? "#C5A880" : "none"}
+                                stroke={isSaved ? "#C5A880" : "currentColor"}
+                                strokeWidth="1.5"
+                                className={isSaved ? "" : "text-fg"}
+                            >
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
                         </button>
                     </div>
 
