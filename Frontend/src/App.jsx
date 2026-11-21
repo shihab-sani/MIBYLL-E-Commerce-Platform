@@ -30,6 +30,8 @@ import AdminProfile from './pages/admin/AdminProfile'
 import SubAdmins from './pages/admin/SubAdmins'
 import AuditLog from './pages/admin/AuditLog'
 import Requests from './pages/admin/Requests'
+import AdminCoffer from './pages/admin/AdminCoffer'
+import Coffer from './pages/Coffer'
 
 function ScrollToTop() {
     const { pathname } = useLocation()
@@ -67,6 +69,7 @@ export default function App() {
                     <Route path="sub-admins" element={<SubAdmins />} />
                     <Route path="audit" element={<AuditLog />} />
                     <Route path="footer" element={<FooterEditor />} />
+                    <Route path="coffer" element={<AdminCoffer />} />
                 </Route>
 
                 {/* CUSTOMER — standard layout (Navbar is always visible) */}
@@ -98,6 +101,7 @@ function AnimatedRoutes() {
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+                <Route path="/coffer" element={<Coffer />} />
                 <Route path="*" element={
                      <div className="py-40 text-center">
                         <h1 className="text-5xl font-serif mb-4 text-fg">404</h1>
