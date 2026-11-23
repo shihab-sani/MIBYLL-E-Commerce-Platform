@@ -101,21 +101,23 @@ export default function Navbar() {
             <header
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`fixed top-0 left-0 w-full z-[110] transition-colors duration-300 transform-gpu will-change-transform ${
+                className={`fixed top-0 left-0 w-full z-[120] transition-colors duration-300 transform-gpu will-change-transform ${
                     drawerOpen
-                        ? 'bg-transparent' // <-- Transparent when drawer is open
+                        ? 'bg-transparent pointer-events-none'
                         : isSolid
-                            ? 'bg-[#050510] text-white shadow-xl'
-                            : 'bg-transparent text-white'
+                            ? 'bg-[#050510] text-white shadow-xl pointer-events-auto'
+                            : 'bg-transparent text-white pointer-events-auto'
                 }`}
             >
                 <div className="max-w-[1500px] mx-auto px-5 lg:px-10">
                     <div className="grid grid-cols-3 items-center h-20 lg:h-24">
-                        <div className="flex justify-start">
+
+                        {/* ANIMATED HAMBURGER TO X */}
+                        <div className="flex justify-start w-fit pointer-events-auto z-[130]">
                             <button
                                 onClick={() => setDrawerOpen(!drawerOpen)}
                                 aria-label="Menu"
-                                className="hover:opacity-60 transition-opacity p-2 -ml-2 focus:outline-none" // <-- Added focus:outline-none
+                                className="hover:opacity-60 transition-opacity p-2 -ml-2 focus:outline-none"
                             >
                                 <div className="w-6 h-5 relative flex flex-col justify-between">
                                     <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 origin-center ${drawerOpen ? 'absolute top-1/2 -translate-y-1/2 rotate-45' : 'absolute top-0'}`} />
@@ -126,7 +128,6 @@ export default function Navbar() {
                         </div>
 
                         <div className="flex justify-center">
-                            {/* HIDE LOGO WHEN DRAWER IS OPEN */}
                             {!drawerOpen && (
                                 <Link to="/" className="text-2xl lg:text-3xl font-serif tracking-[0.35em] uppercase">
                                     Mibyll
@@ -135,7 +136,6 @@ export default function Navbar() {
                         </div>
 
                         <div className="flex justify-end items-center gap-6">
-                            {/* HIDE ICONS WHEN DRAWER IS OPEN */}
                             {!drawerOpen && (
                                 <>
                                     <div className="relative flex items-center" ref={searchRef}>
@@ -200,15 +200,21 @@ export default function Navbar() {
                         {/* --- PANEL 1: MAIN MENU --- */}
                         <div className="absolute top-0 left-0 w-full h-full flex flex-col bg-surface text-fg">
 
-                            {/* Aligned header height with main header */}
-                            <div className="flex items-center justify-between px-8 h-20 lg:h-24 border-b border-c shrink-0">
-                                <div className="w-6 h-6"></div>
-                                <span className="text-xl font-serif tracking-[0.2em] uppercase text-fg">Menu</span>
-                                <div className="w-6"></div>
+                            <div className="relative flex items-center justify-center h-20 lg:h-24 border-b border-c shrink-0 pl-16">
+                                <span className="text-2xl font-serif tracking-[0.3em] uppercase text-fg">Mibyll</span>
                             </div>
 
                             <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
                                 <nav className="flex flex-col">
+
+                                    <Link
+                                        to="/coffer"
+                                        onClick={() => setDrawerOpen(false)}
+                                        className="px-8 py-5 text-left text-sm uppercase tracking-widest2 border-b border-c flex justify-between items-center transition-all hover:bg-cbord/10 text-fg/80 hover:text-fg"
+                                    >
+                                        +880-431-
+                                    </Link>
+
                                     {categories.map(c => {
                                         const hasSubcategories = c.subcategories && c.subcategories.length > 0;
                                         return (
@@ -235,12 +241,6 @@ export default function Navbar() {
                                             </button>
                                         );
                                     })}
-                                    <div className="mt-8 px-8 flex flex-col gap-4">
-                                        <h3 className="text-[10px] text-muted uppercase tracking-widest border-b border-c pb-2">Discover</h3>
-                                        <Link to="/coffer" onClick={() => setDrawerOpen(false)} className="hover:opacity-60 text-fg text-sm uppercase tracking-widest2">
-                                            The History of the House
-                                        </Link>
-                                    </div>
                                 </nav>
 
                                 <div className="mt-12 px-8 pb-12 flex flex-col gap-6">
@@ -282,18 +282,25 @@ export default function Navbar() {
                         {/* --- PANEL 2: SUBCATEGORIES --- */}
                         <div className="absolute top-0 left-full w-full h-full flex flex-col bg-surface text-fg">
 
-                            {/* Aligned header height with main header */}
-                            <div className="flex items-center justify-between px-8 h-20 lg:h-24 border-b border-c shrink-0">
-                                <button onClick={() => setActiveCategory(null)} className="flex items-center gap-2 hover:opacity-50 transition-opacity text-fg text-xs uppercase tracking-wider font-medium">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M15 18l-6-6 6-6"/>
-                                    </svg>
-                                    Back
-                                </button>
-                                <span className="text-lg font-serif tracking-[0.2em] uppercase text-fg">
-                                    {activeCategory?.name || 'Category'}
-                                </span>
-                                <div className="w-6" /> {/* Spacer to keep center alignment */}
+                            {/* Header Container */}
+                            <div className="flex flex-col border-b border-c shrink-0">
+
+                                {/* Top Row: Category Title (matches main header height) */}
+                                <div className="flex items-center justify-center h-20 lg:h-24">
+                                    <span className="text-lg font-serif tracking-[0.2em] uppercase text-fg">
+                                        {activeCategory?.name || 'Category'}
+                                    </span>
+                                </div>
+
+                                {/* Bottom Row: Back Button (aligned directly under the X) */}
+                                <div className="px-5 lg:px-10 pb-4">
+                                    <button onClick={() => setActiveCategory(null)} className="flex items-center gap-1.5 hover:opacity-50 transition-opacity text-fg text-xs uppercase tracking-wider font-medium">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M15 18l-6-6 6-6"/>
+                                        </svg>
+                                        Back
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
