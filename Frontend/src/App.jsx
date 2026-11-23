@@ -24,6 +24,7 @@ import Banners from './pages/admin/Banners'
 import Products from './pages/admin/Products'
 import FeaturedProducts from './pages/admin/FeaturedProducts'
 import ProductForm from './pages/admin/ProductForm'
+import DeliverySettings from './pages/admin/DeliverySettings'
 import Categories from './pages/admin/Categories'
 import Orders from './pages/admin/Orders'
 import Customers from './pages/admin/Customers'
@@ -59,6 +60,7 @@ export default function App() {
                     <Route path="featured-products" element={<FeaturedProducts />} />
                     <Route path="products/new" element={<ProductForm />} />
                     <Route path="products/:id/edit" element={<ProductForm />} />
+                    <Route path="delivery" element={<DeliverySettings />} />
                     <Route path="categories" element={<Categories />} />
                     <Route path="orders" element={<Orders />} />
                     <Route path="customers" element={<Customers />} />
