@@ -10,6 +10,7 @@ import online.shop.DTOs.BannerDtos.*;
 import online.shop.DTOs.OrderDtos.*;
 import online.shop.DTOs.ProductDtos.*;
 import online.shop.DTOs.RequestDtos.*;
+import online.shop.DTOs.ReviewDtos;
 import online.shop.Entity.SiteSettings;
 import online.shop.Services.*;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,7 @@ public class AdminController {
     private final SiteSettingsService siteSettingsService;
     private final RequestService requestService;
     private final CofferService cofferService;
+    private final ReviewService reviewService;
 
     /* ---------------- DASHBOARD ---------------- */
 
@@ -339,6 +341,33 @@ public class AdminController {
     public ResponseEntity<Void> deleteCoffer(@PathVariable UUID id) {
         cofferService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /* ============================================================
+       CUSTOMER REVIEWS
+       ============================================================ */
+
+    @GetMapping("/customers/{userId}/reviews")
+    public ResponseEntity<List<ReviewDtos.AdminReviewDto>> getUserReviews(@PathVariable UUID userId) {
+        return ResponseEntity.ok(reviewService.getReviewsByUser(userId));
+    }
+
+    @PatchMapping("/reviews/{reviewId}/reply")
+    public ResponseEntity<Void> replyToReview(@PathVariable UUID reviewId, @RequestBody ReviewDtos.AdminReplyRequest req) {
+        reviewService.replyToReview(reviewId, req.reply());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/reviews/{reviewId}/reply")
+    public ResponseEntity<Void> deleteAdminReply(@PathVariable UUID reviewId) {
+        reviewService.deleteAdminReply(reviewId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/reviews/{reviewId}")
+    public ResponseEntity<Void> deleteReview(@PathVariable UUID reviewId) {
+        reviewService.deleteReviewByAdmin(reviewId);
+        return ResponseEntity.ok().build();
     }
 
     /* ---------------- helper ---------------- */

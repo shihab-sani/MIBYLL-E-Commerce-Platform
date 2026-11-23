@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface ProductReviewRepository extends JpaRepository<ProductReview, UUID> {
     List<ProductReview> findByProductIdOrderByCreatedAtDesc(UUID productId);
+    List<ProductReview> findByUserIdOrderByCreatedAtDesc(UUID userId);
     boolean existsByProductIdAndUserId(UUID productId, UUID userId);
 }

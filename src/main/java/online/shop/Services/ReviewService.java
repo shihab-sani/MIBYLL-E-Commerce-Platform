@@ -27,7 +27,7 @@ public class ReviewService {
         return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId)
                 .stream().map(r -> new ReviewDto(
                         r.getId(), r.getUser().getEmail(), r.getUser().getFullName(), r.getRating(),
-                        r.getComment(), r.getImageUrls(), r.getCreatedAt()
+                        r.getComment(), r.getImageUrls(), r.getAdminReply(), r.getCreatedAt()
                 )).toList();
     }
 
@@ -81,5 +81,42 @@ public class ReviewService {
         }
 
         reviewRepository.delete(review);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminReviewDto> getReviewsByUser(UUID userId) {
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(r -> new AdminReviewDto(
+                        r.getId(),
+                        r.getProduct().getId(),
+                        r.getProduct().getName(),
+                        r.getProduct().getSlug(),
+                        r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getImageUrls(),
+                        r.getAdminReply(),
+                        r.getCreatedAt()
+                )).toList();
+    }
+
+    @Transactional
+    public void replyToReview(UUID reviewId, String reply) {
+        ProductReview review = reviewRepository.findById(reviewId).orElseThrow(() -> ApiException.notFound("Review not found"));
+        review.setAdminReply(reply);
+        reviewRepository.save(review);
+    }
+
+    @Transactional
+    public void deleteAdminReply(UUID reviewId) {
+        ProductReview review = reviewRepository.findById(reviewId).orElseThrow(() -> ApiException.notFound("Review not found"));
+        review.setAdminReply(null);
+        reviewRepository.save(review);
+    }
+
+    @Transactional
+    public void deleteReviewByAdmin(UUID reviewId) {
+        if (!reviewRepository.existsById(reviewId)) throw ApiException.notFound("Review not found");
+        reviewRepository.deleteById(reviewId);
     }
 }
