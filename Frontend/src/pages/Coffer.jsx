@@ -49,7 +49,7 @@ export default function Coffer() {
         <div className="bg-surface min-h-screen pt-32 pb-24">
             {/* Editorial Header */}
             <div className="text-center max-w-3xl mx-auto px-5 mb-24">
-                <h1 className="text-4xl md:text-6xl font-serif text-fg mb-6">The History of the House</h1>
+                <h1 className="text-4xl md:text-6xl font-serif text-fg mb-6">+880-431-</h1>
                 <div className="w-24 h-px bg-[#C5A880] mx-auto mb-6" />
                 <p className="text-muted text-sm leading-relaxed">
                     A timeline of the key moments and milestones that make up the House's incredible legacy.

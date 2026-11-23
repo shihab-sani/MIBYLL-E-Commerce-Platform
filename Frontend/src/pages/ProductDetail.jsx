@@ -485,6 +485,12 @@ export default function ProductDetail() {
                                             ))}
                                         </div>
                                     )}
+                                    {review.adminReply && (
+                                        <div className="mt-4 p-3 bg-cbord/10 border-l-2 border-[#C5A880]">
+                                            <p className="text-[10px] uppercase tracking-widest2 text-[#C5A880] mb-1">Reply from Mibyll</p>
+                                            <p className="text-xs text-fg">{review.adminReply}</p>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
