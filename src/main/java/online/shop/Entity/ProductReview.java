@@ -44,4 +44,7 @@ public class ProductReview {
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(length = 1000)
+    private String adminReply;
 }
