@@ -83,20 +83,25 @@ public class ReviewService {
         reviewRepository.delete(review);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = false)
     public List<AdminReviewDto> getReviewsByUser(UUID userId) {
-        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        List<ProductReview> reviews = reviewRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        // Mark as seen
+        boolean updated = false;
+        for (ProductReview r : reviews) {
+            if (!r.isSeenByAdmin()) {
+                r.setSeenByAdmin(true);
+                updated = true;
+            }
+        }
+        if (updated) reviewRepository.saveAll(reviews);
+
+        return reviews.stream()
                 .map(r -> new AdminReviewDto(
-                        r.getId(),
-                        r.getProduct().getId(),
-                        r.getProduct().getName(),
-                        r.getProduct().getSlug(),
+                        r.getId(), r.getProduct().getId(), r.getProduct().getName(), r.getProduct().getSlug(),
                         r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl(),
-                        r.getRating(),
-                        r.getComment(),
-                        r.getImageUrls(),
-                        r.getAdminReply(),
-                        r.getCreatedAt()
+                        r.getRating(), r.getComment(), r.getImageUrls(), r.getAdminReply(), r.getCreatedAt()
                 )).toList();
     }
 
@@ -104,6 +109,7 @@ public class ReviewService {
     public void replyToReview(UUID reviewId, String reply) {
         ProductReview review = reviewRepository.findById(reviewId).orElseThrow(() -> ApiException.notFound("Review not found"));
         review.setAdminReply(reply);
+        review.setSeenByCustomer(false);
         reviewRepository.save(review);
     }
 
@@ -118,5 +124,41 @@ public class ReviewService {
     public void deleteReviewByAdmin(UUID reviewId) {
         if (!reviewRepository.existsById(reviewId)) throw ApiException.notFound("Review not found");
         reviewRepository.deleteById(reviewId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countUnseenReviews() {
+        return reviewRepository.countBySeenByAdminFalse();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerReviewDto> getMyReviews(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow();
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+                .map(r -> new CustomerReviewDto(
+                        r.getId(), r.getProduct().getId(), r.getProduct().getName(), r.getProduct().getSlug(),
+                        r.getProduct().getImages().isEmpty() ? null : r.getProduct().getImages().get(0).getImageUrl(),
+                        r.getRating(), r.getComment(), r.getImageUrls(), r.getAdminReply(), r.getCreatedAt()
+                )).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long countUnreadReplies(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow();
+        return reviewRepository.countByUserIdAndAdminReplyIsNotNullAndSeenByCustomerFalse(user.getId());
+    }
+
+    @Transactional
+    public void markRepliesAsSeen(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow();
+        List<ProductReview> reviews = reviewRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        boolean updated = false;
+        for (ProductReview r : reviews) {
+            if (!r.isSeenByCustomer() && r.getAdminReply() != null) {
+                r.setSeenByCustomer(true);
+                updated = true;
+            }
+        }
+        if (updated) reviewRepository.saveAll(reviews);
     }
 }

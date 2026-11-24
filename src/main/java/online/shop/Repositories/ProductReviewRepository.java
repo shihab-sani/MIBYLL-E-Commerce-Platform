@@ -10,4 +10,7 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, UU
     List<ProductReview> findByProductIdOrderByCreatedAtDesc(UUID productId);
     List<ProductReview> findByUserIdOrderByCreatedAtDesc(UUID userId);
     boolean existsByProductIdAndUserId(UUID productId, UUID userId);
+    long countBySeenByAdminFalse();
+    long countByUserIdAndSeenByAdminFalse(UUID userId);
+    long countByUserIdAndAdminReplyIsNotNullAndSeenByCustomerFalse(UUID userId);
 }
