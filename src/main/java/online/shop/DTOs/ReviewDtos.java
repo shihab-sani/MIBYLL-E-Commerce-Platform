@@ -19,6 +19,10 @@ public class ReviewDtos {
             Integer rating, String comment, List<String> imageUrls, String adminReply, LocalDateTime createdAt
     ) {}
 
+    public record CustomerReviewDto(
+            UUID id, UUID productId, String productName, String productSlug, String productImage,
+            Integer rating, String comment, List<String> imageUrls, String adminReply, LocalDateTime createdAt
+    ) {}
 
     public record AdminReplyRequest(String reply) {}
 }

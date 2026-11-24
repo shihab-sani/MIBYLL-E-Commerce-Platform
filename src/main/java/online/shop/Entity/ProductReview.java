@@ -47,4 +47,12 @@ public class ProductReview {
 
     @Column(length = 1000)
     private String adminReply;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean seenByAdmin = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean seenByCustomer = false;
 }
