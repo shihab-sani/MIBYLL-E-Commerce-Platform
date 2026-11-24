@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 
+import { ConfirmProvider } from './context/ConfirmContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -50,39 +51,41 @@ export default function App() {
     return (
         // WRAP THE ENTIRE APP HERE
         <WishlistProvider>
-            <ScrollToTop />
-            <Routes>
-                {/* ADMIN — separate layout */}
-                <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="banners" element={<Banners />} />
-                    <Route path="products" element={<Products />} />
-                    <Route path="featured-products" element={<FeaturedProducts />} />
-                    <Route path="products/new" element={<ProductForm />} />
-                    <Route path="products/:id/edit" element={<ProductForm />} />
-                    <Route path="delivery" element={<DeliverySettings />} />
-                    <Route path="categories" element={<Categories />} />
-                    <Route path="orders" element={<Orders />} />
-                    <Route path="customers" element={<Customers />} />
-                    <Route path="requests" element={<Requests />} />
-                    <Route path="profile" element={<AdminProfile />} />
-                    <Route path="sub-admins" element={<SubAdmins />} />
-                    <Route path="audit" element={<AuditLog />} />
-                    <Route path="footer" element={<FooterEditor />} />
-                    <Route path="coffer" element={<AdminCoffer />} />
-                </Route>
+            <ConfirmProvider>
+                <ScrollToTop />
+                <Routes>
+                    {/* ADMIN — separate layout */}
+                    <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                        <Route index element={<Dashboard />} />
+                        <Route path="banners" element={<Banners />} />
+                        <Route path="products" element={<Products />} />
+                        <Route path="featured-products" element={<FeaturedProducts />} />
+                        <Route path="products/new" element={<ProductForm />} />
+                        <Route path="products/:id/edit" element={<ProductForm />} />
+                        <Route path="delivery" element={<DeliverySettings />} />
+                        <Route path="categories" element={<Categories />} />
+                        <Route path="orders" element={<Orders />} />
+                        <Route path="customers" element={<Customers />} />
+                        <Route path="requests" element={<Requests />} />
+                        <Route path="profile" element={<AdminProfile />} />
+                        <Route path="sub-admins" element={<SubAdmins />} />
+                        <Route path="audit" element={<AuditLog />} />
+                        <Route path="footer" element={<FooterEditor />} />
+                        <Route path="coffer" element={<AdminCoffer />} />
+                    </Route>
 
-                {/* CUSTOMER — standard layout */}
-                <Route path="*" element={
-                     <div className="min-h-screen flex flex-col">
-                        <Navbar />
-                        <main className="flex-1">
-                            <AnimatedRoutes />
-                        </main>
-                        <Footer />
-                    </div>
-                } />
-            </Routes>
+                    {/* CUSTOMER — standard layout */}
+                    <Route path="*" element={
+                         <div className="min-h-screen flex flex-col">
+                            <Navbar />
+                            <main className="flex-1">
+                                <AnimatedRoutes />
+                            </main>
+                            <Footer />
+                        </div>
+                    } />
+                </Routes>
+            </ConfirmProvider>
         </WishlistProvider>
     )
 }
