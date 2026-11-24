@@ -23,6 +23,7 @@ const TABS = [
     { key: 'REFUNDED',  label: 'Refunded' },
     { key: 'CANCELLED', label: 'Cancelled' },
     { key: 'INQUIRIES', label: 'My Inquiries' },
+    { key: 'REVIEWS',   label: 'My Reviews' },
 ]
 
 export default function MyOrders() {
@@ -43,6 +44,24 @@ export default function MyOrders() {
     const [refundReason, setRefundReason] = useState('')
     const [submittingRefund, setSubmittingRefund] = useState(false)
 
+    const [myReviews, setMyReviews] = useState([])
+    const [loadingReviews, setLoadingReviews] = useState(false)
+    const [unreadReviewsCount, setUnreadReviewsCount] = useState(0)
+
+    const loadMyReviews = () => {
+        setLoadingReviews(true)
+        api.get('/orders/reviews/my')
+            .then(r => {
+                setMyReviews(r.data)
+                // Mark as seen and tell Navbar to clear badge
+                api.patch('/orders/reviews/read-all').then(() => {
+                    window.dispatchEvent(new Event('refreshCustomerBadge'))
+                })
+            })
+            .catch(() => toast.error('Failed to load reviews'))
+            .finally(() => setLoadingReviews(false))
+    }
+
     const loadInquiries = () => {
         api.get('/orders/requests')
             .then(r => setInquiries(r.data))
@@ -61,6 +80,11 @@ export default function MyOrders() {
     useEffect(() => {
         load()
         loadInquiries()
+
+        // Fetch unread reviews count
+        api.get('/orders/reviews/unread-count')
+            .then(r => setUnreadReviewsCount(r.data))
+            .catch(() => {})
     }, [])
 
     const handleCancel = async (orderId) => {
@@ -329,11 +353,17 @@ export default function MyOrders() {
                     if (t.key === 'DELIVERED') badgeCount = unreadDeliveredCount;
                     if (t.key === 'CANCELLED') badgeCount = unreadCancelledCount;
                     if (t.key === 'REFUNDED') badgeCount = unreadRefundedCount;
-                    if (t.key === 'INQUIRIES') badgeCount = unreadCount; // Existing inquiry count
+                    if (t.key === 'INQUIRIES') badgeCount = unreadCount;
+                    if (t.key === 'REVIEWS') badgeCount = unreadReviewsCount;
 
                     return (
                         <button key={t.key} onClick={() => {
                             setTab(t.key);
+                            if (t.key === 'REVIEWS') {
+                                setUnreadReviewsCount(0); // Clear badge locally
+                                loadMyReviews();
+                                window.dispatchEvent(new Event('refreshCustomerBadge'));
+                            }
                             // Mark orders as read when clicking any order tab
                             if (t.key !== 'CART' && t.key !== 'INQUIRIES' && unreadOrdersCount > 0) {
                                 api.patch('/orders/read-all').then(() => {
@@ -493,6 +523,67 @@ export default function MyOrders() {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* --- MY REVIEWS TAB --- */}
+            {tab === 'REVIEWS' && (
+                <div className="space-y-6">
+                    {loadingReviews ? (
+                        <p className="text-center text-sm text-muted py-10">Loading reviews...</p>
+                    ) : myReviews.length === 0 ? (
+                        <div className="py-24 text-center border border-c bg-surface">
+                            <p className="text-sm text-muted mb-4">You haven't reviewed any products yet.</p>
+                            <Link to="/shop" className="btn-primary">Start Shopping</Link>
+                        </div>
+                    ) : (
+                        myReviews.map(review => (
+                            <div key={review.id} className="card p-6 flex flex-col gap-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-16 h-20 bg-sand shrink-0 overflow-hidden">
+                                        {review.productImage && <img src={review.productImage} alt="" className="w-full h-full object-cover" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Link to={`/product/${review.productSlug}`} className="text-sm font-serif text-fg hover:underline">
+                                                    {review.productName}
+                                                </Link>
+                                                <div className="flex gap-1 mt-1">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <svg key={star} width="12" height="12" viewBox="0 0 24 24" fill={star <= review.rating ? "#C5A880" : "none"} stroke={star <= review.rating ? "#C5A880" : "currentColor"} strokeWidth="1">
+                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                                        </svg>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] text-muted">{new Date(review.createdAt).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <p className="text-sm text-muted mt-2">{review.comment}</p>
+
+                                        {review.imageUrls?.length > 0 && (
+                                            <div className="flex gap-2 mt-2">
+                                                {review.imageUrls.map((url, i) => (
+                                                    <a key={i} href={url} target="_blank" rel="noreferrer" className="w-12 h-12 border border-c">
+                                                        <img src={url} className="w-full h-full object-cover" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Admin Reply Box */}
+                                {review.adminReply && (
+                                    <div className="mt-2 p-4 bg-cbord/10 border-l-2 border-[#C5A880]">
+                                        <p className="text-[10px] uppercase tracking-widest2 text-[#C5A880] mb-1">Reply from Mibyll</p>
+                                        <p className="text-sm text-fg">{review.adminReply}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
 
