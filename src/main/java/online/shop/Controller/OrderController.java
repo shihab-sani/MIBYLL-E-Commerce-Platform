@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import online.shop.DTOs.OrderDtos.*;
 import online.shop.DTOs.RequestDtos.*;
+import online.shop.DTOs.ReviewDtos;
 import online.shop.Services.OrderService;
 import online.shop.Services.RequestService;
+import online.shop.Services.ReviewService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class OrderController {
     private final OrderService orderService;
     private final RequestService requestService;
+    private final ReviewService reviewService;
 
     @PostMapping
     public ResponseEntity<OrderDto> place(@AuthenticationPrincipal UserDetails ud,
@@ -87,6 +90,22 @@ public class OrderController {
     @PatchMapping("/read-all")
     public ResponseEntity<Void> marksAllRead(@AuthenticationPrincipal UserDetails ud) {
         orderService.markOrdersAsRead(ud.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/reviews/my")
+    public ResponseEntity<List<ReviewDtos.CustomerReviewDto>> getMyReviews(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(reviewService.getMyReviews(ud.getUsername()));
+    }
+
+    @GetMapping("/reviews/unread-count")
+    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(reviewService.countUnreadReplies(ud.getUsername()));
+    }
+
+    @PatchMapping("/reviews/read-all")
+    public ResponseEntity<Void> markRead(@AuthenticationPrincipal UserDetails ud) {
+        reviewService.markRepliesAsSeen(ud.getUsername());
         return ResponseEntity.ok().build();
     }
 }

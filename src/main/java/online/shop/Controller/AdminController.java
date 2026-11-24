@@ -370,6 +370,11 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/reviews/count-unseen")
+    public ResponseEntity<Long> getUnseenReviewCount() {
+        return ResponseEntity.ok(reviewService.countUnseenReviews());
+    }
+
     /* ---------------- helper ---------------- */
 
     private String roleOf(UserDetails ud) {
