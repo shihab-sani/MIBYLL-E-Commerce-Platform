@@ -28,6 +28,7 @@ export default function AdminLayout() {
     const [unreadRequestsCount, setUnreadRequestsCount] = useState(0)
     const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
     const [refundRequestsCount, setRefundRequestsCount] = useState(0)
+    const [unseenReviewsCount, setUnseenReviewsCount] = useState(0)
 
     // Extracted fetch logic so it can be called manually
     const fetchUnreadCount = () => {
@@ -37,6 +38,12 @@ export default function AdminLayout() {
                 setUnreadRequestsCount(unreadCount)
             })
             .catch(() => setUnreadRequestsCount(0))
+    }
+
+    const fetchUnseenReviewsCount = () => {
+        api.get('/admin/reviews/count-unseen')
+            .then(r => setUnseenReviewsCount(r.data))
+            .catch(() => setUnseenReviewsCount(0))
     }
 
     const fetchRefundRequestsCount = () => {
@@ -55,6 +62,7 @@ export default function AdminLayout() {
         fetchUnreadCount()
         fetchPendingOrdersCount()
         fetchRefundRequestsCount() // <-- NEW
+        fetchUnseenReviewsCount() // <-- NEW
 
         window.addEventListener('refreshAdminBadge', fetchUnreadCount)
         window.addEventListener('refreshAdminOrderBadge', () => {
@@ -62,12 +70,15 @@ export default function AdminLayout() {
             fetchRefundRequestsCount() // <-- Refresh refunds too
         })
 
+        window.addEventListener('refreshAdminReviewBadge', fetchUnseenReviewsCount)
+
         return () => {
             window.removeEventListener('refreshAdminBadge', fetchUnreadCount)
             window.removeEventListener('refreshAdminOrderBadge', () => {
                 fetchPendingOrdersCount()
                 fetchRefundRequestsCount()
             })
+            window.removeEventListener('refreshAdminReviewBadge', fetchUnseenReviewsCount)
         }
     }, [])
 
@@ -82,10 +93,11 @@ export default function AdminLayout() {
                 <nav className="flex-1 p-5 space-y-1 overflow-y-auto custom-scrollbar">
                     {visibleNav.map(item => (
                         <NavLink key={item.to} to={item.to} end={item.end}
-                                 className={({ isActive }) =>
-                                     `flex items-center px-4 py-3 text-[11px] uppercase tracking-widest2 transition-colors
-                        ${isActive ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}>
-                            <span>{item.label}</span>
+                             className={({ isActive }) =>
+                                 `flex items-center px-4 py-3 text-[11px] uppercase tracking-widest2 transition-colors
+                                  ${isActive ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}>
+                                <span>{item.label}</span>
+
                             {/* Existing Requests Badge */}
                             {item.to === '/admin/requests' && unreadRequestsCount > 0 && (
                                 <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
@@ -93,10 +105,17 @@ export default function AdminLayout() {
                                 </span>
                             )}
 
-                            {/* NEW: Orders Badge */}
+                            {/* Existing Orders Badge */}
                             {item.to === '/admin/orders' && (pendingOrdersCount + refundRequestsCount) > 0 && (
                                 <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
                                     {pendingOrdersCount + refundRequestsCount}
+                                </span>
+                            )}
+
+                            {/* NEW: Customers Reviews Badge */}
+                            {item.to === '/admin/customers' && unseenReviewsCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] rounded-full px-2 py-0.5 ml-auto">
+                                    {unseenReviewsCount}
                                 </span>
                             )}
                         </NavLink>

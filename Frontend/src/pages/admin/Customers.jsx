@@ -40,9 +40,19 @@ export default function Customers() {
     const surfaceBg = { background: 'rgb(var(--surface))' }
 
     const fetchReviews = (userId) => {
-        if (reviews[userId]) return // Don't re-fetch if already loaded
+        if (reviews[userId]) return
         api.get(`/admin/customers/${userId}/reviews`)
-            .then(r => setReviews(prev => ({ ...prev, [userId]: r.data })))
+            .then(r => {
+                setReviews(prev => ({ ...prev, [userId]: r.data }))
+
+                // Clear the local unseen count for this customer
+                setCustomers(prev => prev.map(cust =>
+                    cust.id === userId ? { ...cust, unseenReviewsCount: 0 } : cust
+                ))
+
+                // Tell the sidebar to refresh its count
+                window.dispatchEvent(new Event('refreshAdminReviewBadge'))
+            })
             .catch(() => toast.error('Failed to load reviews'))
     }
 
@@ -122,13 +132,20 @@ export default function Customers() {
                                 onClick={() => handleExpand(c.id)}
                                 className="w-full text-left p-5 flex flex-wrap items-center gap-5"
                             >
-                                <div className="w-12 h-12 shrink-0 rounded-full bg-ink text-white flex items-center
-                                justify-center text-sm font-serif">
+                                <div className="w-12 h-12 shrink-0 rounded-full bg-ink text-white flex items-center justify-center text-sm font-serif">
                                     {c.fullName?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                                 </div>
 
                                 <div className="flex-1 min-w-[220px]">
-                                    <p className="text-sm text-fg font-medium">{c.fullName}</p>
+                                    <div className="flex items-center gap-3">
+                                        <p className="text-sm text-fg font-medium">{c.fullName}</p>
+                                        {/* NEW: Review Badge */}
+                                        {c.unseenReviewsCount > 0 && (
+                                            <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                                New Review
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-[11px] text-muted mt-0.5">{c.email}</p>
                                     {c.phone && <p className="text-[11px] text-muted">{c.phone}</p>}
                                 </div>
