@@ -15,6 +15,7 @@ public class CustomerDtos {
             LocalDateTime createdAt,
             long orderCount,
             BigDecimal totalSpent,
-            List<OrderDtos.OrderDto> orders
+            List<OrderDtos.OrderDto> orders,
+            long unseenReviewsCount
     ) {}
 }

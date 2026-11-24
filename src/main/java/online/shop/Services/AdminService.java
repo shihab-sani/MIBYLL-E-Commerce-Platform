@@ -7,6 +7,7 @@ import online.shop.DTOs.OrderDtos.*;
 import online.shop.Entity.*;
 import online.shop.Repositories.OrderRepository;
 import online.shop.Repositories.ProductRepository;
+import online.shop.Repositories.ProductReviewRepository;
 import online.shop.Repositories.UserRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class AdminService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderService orderService;
+    private final ProductReviewRepository reviewRepository;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard() {
@@ -115,6 +117,7 @@ public class AdminService {
             List<OrderDto> orderDtos = orders.stream()
                     .map(orderService::toDto)
                     .toList();
+            long unseenReviews = reviewRepository.countByUserIdAndSeenByAdminFalse(c.getId());
 
             result.add(new CustomerDto(
                     c.getId(),
@@ -125,7 +128,8 @@ public class AdminService {
                     c.getCreatedAt(),
                     orders.size(),
                     spent,
-                    orderDtos
+                    orderDtos,
+                    unseenReviews
             ));
         }
 
