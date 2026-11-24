@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
+import { useConfirm } from '../../context/ConfirmContext'
 
 const empty = { name: '', slug: '', description: '', images: [], parentId: '' }
 
 export default function Categories() {
+    const { confirm } = useConfirm()
     const [categories, setCategories] = useState([])
     const [form, setForm] = useState(empty)
     const [editingId, setEditingId] = useState(null)
@@ -69,7 +71,14 @@ export default function Categories() {
     }
 
     const remove = async (c) => {
-        if (!confirm(`Delete category "${c.name}"?`)) return
+        const isConfirmed = await confirm({
+            title: 'Delete Category',
+            message: `Are you sure you want to delete "${c.name}"? This may affect products in this category.`,
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/admin/categories/${c.id}`)
             toast.success('Category deleted')

@@ -8,11 +8,13 @@ import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
 import AboutUsPanel from '../components/AboutUsPanel'
 import { useWishlist } from '../context/WishlistContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function ProductDetail() {
     const { slug } = useParams()
     const { formatPrice } = useLocalization()
     const navigate = useNavigate()
+    const { confirm } = useConfirm()
     const { user, isAuthenticated } = useAuth()
     const { addToCart } = useCart()
 
@@ -144,7 +146,14 @@ export default function ProductDetail() {
     }
 
     const handleDeleteClick = async (reviewId) => {
-        if (!window.confirm('Are you sure you want to delete this review?')) return
+        const isConfirmed = await confirm({
+            title: 'Delete Review',
+            message: 'Are you sure you want to delete your review? This cannot be undone.',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/products/${slug}/reviews/${reviewId}`)
             toast.success('Review deleted.')

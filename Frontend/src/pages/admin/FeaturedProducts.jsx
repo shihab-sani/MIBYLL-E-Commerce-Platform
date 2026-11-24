@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import { useConfirm } from '../../context/ConfirmContext'
 
 export default function FeaturedProducts() {
+    const { confirm } = useConfirm()
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
     const navigate = useNavigate() // <-- Initialize navigate
@@ -22,12 +24,18 @@ export default function FeaturedProducts() {
     }, [load])
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this featured product? This action cannot be undone.')) return;
+        const isConfirmed = await confirm({
+            title: 'Delete Product',
+            message: 'Are you sure you want to delete this featured product? This action cannot be undone.',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
 
         try {
             await api.delete(`/admin/products/${id}`);
             toast.success('Product deleted successfully');
-            load(); // Refresh the list
+            load();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to delete product');
         }

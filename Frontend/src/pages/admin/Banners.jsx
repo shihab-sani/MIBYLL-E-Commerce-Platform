@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
+import { useConfirm } from '../../context/ConfirmContext'
 
 const empty = {
     title: '', subtitle: '', ctaText: '', ctaLink: '',
@@ -11,6 +12,7 @@ const empty = {
 }
 
 export default function Banners() {
+    const { confirm } = useConfirm()
     const [banners, setBanners] = useState([])
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState([])
@@ -119,7 +121,14 @@ export default function Banners() {
     }
 
     const remove = async (b) => {
-        if (!confirm('Delete this banner?')) return
+        const isConfirmed = await confirm({
+            title: 'Delete Banner',
+            message: 'Are you sure you want to delete this banner?',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/admin/banners/${b.id}`)
             toast.success('Banner deleted')

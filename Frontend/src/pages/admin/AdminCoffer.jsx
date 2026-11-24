@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import ImageUploader from '../../components/ImageUploader'
+import { useConfirm } from '../../context/ConfirmContext'
 
 // 1. Removed displayOrder from empty state
 const empty = { year: '', title: '', description: '', imageUrl: '' }
 
 export default function AdminCoffer() {
+    const { confirm } = useConfirm()
     const [entries, setEntries] = useState([])
     const [form, setForm] = useState(empty)
     const [editingId, setEditingId] = useState(null)
@@ -38,7 +40,14 @@ export default function AdminCoffer() {
     }
 
     const remove = async (id) => {
-        if (!confirm('Delete this entry?')) return
+        const isConfirmed = await confirm({
+            title: 'Delete Entry',
+            message: 'Are you sure you want to delete this heritage entry? This cannot be undone.',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         await api.delete(`/admin/coffer/${id}`)
         toast.success('Deleted')
         load()

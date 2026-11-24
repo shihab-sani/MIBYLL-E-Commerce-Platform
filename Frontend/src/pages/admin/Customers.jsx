@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import { useConfirm } from '../../context/ConfirmContext'
 
 const money = (n) => `৳ ${Number(n || 0).toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const STATUS_STYLES = {
@@ -13,6 +14,7 @@ const STATUS_STYLES = {
 }
 
 export default function Customers() {
+    const { confirm } = useConfirm()
     const [customers, setCustomers] = useState([])
     const [loading, setLoading] = useState(true)
     const [expanded, setExpanded] = useState(null)
@@ -78,7 +80,14 @@ export default function Customers() {
     }
 
     const handleDeleteReply = async (reviewId, customerId) => {
-        if (!window.confirm('Delete your reply?')) return
+        const isConfirmed = await confirm({
+            title: 'Delete Reply',
+            message: 'Are you sure you want to delete your reply to this review?',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/admin/reviews/${reviewId}/reply`)
             toast.success('Reply deleted')
@@ -90,7 +99,14 @@ export default function Customers() {
     }
 
     const handleDeleteReview = async (reviewId, customerId) => {
-        if (!window.confirm('Are you sure you want to delete this customer review permanently?')) return
+        const isConfirmed = await confirm({
+            title: 'Delete Review',
+            message: 'Are you sure you want to permanently delete this customer review?',
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/admin/reviews/${reviewId}`)
             toast.success('Review deleted')

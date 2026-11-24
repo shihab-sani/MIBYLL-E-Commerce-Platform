@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import { useConfirm } from '../../context/ConfirmContext'
 
 export default function Products() {
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
+    const { confirm } = useConfirm()
 
     const load = () => {
         setLoading(true)
@@ -32,7 +34,14 @@ export default function Products() {
     useEffect(load, [])
 
     const remove = async (p) => {
-        if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return
+        const isConfirmed = await confirm({
+            title: 'Delete Product',
+            message: `Are you sure you want to delete "${p.name}"? This cannot be undone.`,
+            confirmText: 'Delete',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.delete(`/admin/products/${p.id}`)
             toast.success('Product deleted')
@@ -41,10 +50,20 @@ export default function Products() {
     }
 
     const quickDiscount = async (p) => {
-        const input = prompt(`Discount % for "${p.name}" (0–90):`, p.discountPercent)
-        if (input === null) return
+        const input = await confirm({
+            title: 'Update Discount',
+            message: `Enter the new discount percentage for "${p.name}" (0-90):`,
+            requireInput: true,
+            inputLabel: 'Discount (%)',
+            inputType: 'number',
+            defaultInput: p.discountPercent,
+            confirmText: 'Update'
+        })
+
+        if (!input) return
         const val = Number(input)
         if (isNaN(val) || val < 0 || val > 90) { toast.error('Enter a number 0–90'); return }
+
         try {
             await api.patch(`/admin/products/${p.id}/discount`, { discountPercent: val })
             toast.success('Discount updated'); load()
@@ -52,10 +71,20 @@ export default function Products() {
     }
 
     const quickPrice = async (p) => {
-        const input = prompt(`New base price for "${p.name}":`, p.price)
-        if (input === null) return
+        const input = await confirm({
+            title: 'Update Price',
+            message: `Enter the new base price for "${p.name}":`,
+            requireInput: true,
+            inputLabel: 'Base Price (৳)',
+            inputType: 'number',
+            defaultInput: p.price,
+            confirmText: 'Update'
+        })
+
+        if (!input) return
         const val = Number(input)
         if (isNaN(val) || val < 0) { toast.error('Invalid price'); return }
+
         try {
             await api.patch(`/admin/products/${p.id}/price`, { price: val })
             toast.success('Price updated'); load()
@@ -63,10 +92,20 @@ export default function Products() {
     }
 
     const quickStock = async (p) => {
-        const input = prompt(`Stock quantity for "${p.name}":`, p.stockQuantity)
-        if (input === null) return
+        const input = await confirm({
+            title: 'Update Stock',
+            message: `Enter the new stock quantity for "${p.name}":`,
+            requireInput: true,
+            inputLabel: 'Stock Quantity',
+            inputType: 'number',
+            defaultInput: p.stockQuantity,
+            confirmText: 'Update'
+        })
+
+        if (!input) return
         const val = Number(input)
         if (isNaN(val) || val < 0) { toast.error('Invalid quantity'); return }
+
         try {
             await api.patch(`/admin/products/${p.id}/stock`, { stockQuantity: val })
             toast.success('Stock updated'); load()

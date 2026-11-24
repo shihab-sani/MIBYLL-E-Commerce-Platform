@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useLocalization } from '../context/LocalizationContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 const STATUS_STYLES = {
     PENDING:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
@@ -32,6 +33,7 @@ export default function MyOrders() {
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState('ALL')
+    const { confirm } = useConfirm()
 
     // Inquiries State
     const [inquiries, setInquiries] = useState([])
@@ -88,7 +90,14 @@ export default function MyOrders() {
     }, [])
 
     const handleCancel = async (orderId) => {
-        if (!confirm('Are you sure you want to cancel this order?')) return
+        const isConfirmed = await confirm({
+            title: 'Cancel Order',
+            message: 'Are you sure you want to cancel this order? This action cannot be undone.',
+            confirmText: 'Cancel Order',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.patch(`/orders/${orderId}/cancel`)
             toast.success('Order cancelled')
@@ -114,7 +123,14 @@ export default function MyOrders() {
     }
 
     const handleCancelRefund = async (orderId) => {
-        if (!confirm('Are you sure you want to cancel your refund request?')) return
+        const isConfirmed = await confirm({
+            title: 'Cancel Refund Request',
+            message: 'Are you sure you want to cancel your refund request?',
+            confirmText: 'Cancel Request',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         try {
             await api.patch(`/orders/${orderId}/cancel-refund`)
             toast.success('Refund request cancelled')
@@ -154,8 +170,15 @@ export default function MyOrders() {
         }
     }
 
-    const handleCloseConversation = (id) => {
-        if(!confirm('Close this conversation? You cannot send messages afterwards.')) return;
+    const handleCloseConversation = async (id) => {
+        const isConfirmed = await confirm({
+            title: 'Close Conversation',
+            message: 'Close this conversation? You will not be able to send messages afterwards.',
+            confirmText: 'Close',
+            isDanger: true
+        })
+        if (!isConfirmed) return
+
         api.patch(`/orders/requests/${id}/close`).then(() => {
             toast.success('Conversation closed');
             loadInquiries();
