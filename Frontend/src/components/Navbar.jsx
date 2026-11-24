@@ -22,12 +22,29 @@ export default function Navbar() {
     const [searchValue, setSearchValue] = useState('')
     const [hoveredCategory, setHoveredCategory] = useState(null)
     const [hoverTop, setHoverTop] = useState(0)
+    const [unreadReviews, setUnreadReviews] = useState(0)
 
     const [isScrolled, setIsScrolled] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
 
     const searchRef = useRef(null)
     const hoverTimeout = useRef(null)
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            setUnreadReviews(0)
+            return
+        }
+        const fetchUnread = () => {
+            api.get('/orders/reviews/unread-count')
+                .then(r => setUnreadReviews(r.data))
+                .catch(() => {})
+        }
+        fetchUnread()
+        // Listen for custom event to refresh from MyOrders page
+        window.addEventListener('refreshCustomerBadge', fetchUnread)
+        return () => window.removeEventListener('refreshCustomerBadge', fetchUnread)
+    }, [isAuthenticated])
 
     useEffect(() => {
         api.get('/categories').then(r => setCategories(r.data)).catch(() => {})
@@ -117,13 +134,17 @@ export default function Navbar() {
                             <button
                                 onClick={() => setDrawerOpen(!drawerOpen)}
                                 aria-label="Menu"
-                                className="hover:opacity-60 transition-opacity p-2 -ml-2 focus:outline-none"
+                                className="hover:opacity-60 transition-opacity p-2 -ml-2 focus:outline-none relative"
                             >
                                 <div className="w-6 h-5 relative flex flex-col justify-between">
                                     <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 origin-center ${drawerOpen ? 'absolute top-1/2 -translate-y-1/2 rotate-45' : 'absolute top-0'}`} />
                                     <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 ${drawerOpen ? 'opacity-0 absolute top-1/2 -translate-y-1/2' : 'absolute top-1/2 -translate-y-1/2'}`} />
                                     <span className={`block h-[1.5px] w-full bg-current transition-all duration-300 origin-center ${drawerOpen ? 'absolute top-1/2 -translate-y-1/2 -rotate-45' : 'absolute bottom-0'}`} />
                                 </div>
+                                {/* UPDATED: Make the badge a bit larger and add a pulse for attention */}
+                                {unreadReviews > 0 && !drawerOpen && (
+                                    <span className="absolute top-0 right-0 bg-red-600 border-2 border-[#050510] w-3.5 h-3.5 rounded-full animate-pulse"></span>
+                                )}
                             </button>
                         </div>
 
